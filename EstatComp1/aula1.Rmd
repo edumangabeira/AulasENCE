@@ -1,0 +1,157 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Primeira aula de Estatística computacional I.
+
+## Type casting 
+
+```{r}
+
+data = as.Date("18-06-1997", tryFormats = ("%d-%m-%Y"))
+data
+
+```
+## Missing values
+
+Como NA não permite certas comparações lógicas ou operações, é preciso utilizar a função `is.na()` para checar se um valor é faltante.
+
+```{r}
+a = NA
+is.na(a)
+```
+## Alguma funções matemáticas úteis
+
+É importante testar cada uma e ler a documentação caso não se sinta confortável em usá-las
+
+```{r}
+x = 4.85
+abs(x)
+ceiling(x)
+floor(x)
+log(x)
+trunc(x)
+round(x, digits=4)
+exp(x)
+```
+
+### Exercícios
+
+1) Calcule a área de uma circunferência de raio $337$<br>
+2) Qual a raiz quadrada de $3976$?<br>
+3) Crie um objeto $a$, com o valor $10$, e outro, $b$ com o $30$.<br>
+4) Execute uma função que teste se a é menor que o logaritmo(base $10$) de $b$.<br>
+5) Execute uma função que teste se $a$ NÃO é igual a $b$ elevado ao quadrado e dividido por $a$ menos $1$.<br>
+6) Crie um objeto com nome nota média e atribua o valor $10$.<br>
+7) se $a = NA$ e $b = 10$, calcule: $a^2$, $a^0$, $a + b$. Explique os resultados.<br>
+
+```{r}
+# 1
+raio = 337
+circunferencia = pi * raio ^ 2
+circunferencia
+
+# 2
+sqrt(3976)
+
+# 3
+a = 10
+b = 30
+
+# 4
+a < log(b)
+
+# 5
+a != (b^2/(a-1))
+
+# 6
+nota_media = 10
+
+# 7
+a = NA
+b= 10
+
+# Como 'a' é um valor faltante, ele não aceita operações aritméticas, assim qualquer operação aritmética realizada com um objeto NA resultará sempre em NA
+
+a^2
+a^0
+a+b
+
+
+```
+
+## sequências numéricas
+
+```{r}
+
+# criando sequências
+sequencia_passo = seq(5, 17, by = 0.2)
+sequencia_passo
+
+sequencia_quantidade = seq(5, 17, length = 15)
+sequencia_quantidade
+
+# removendo elementos
+idades = c(21, 15, 45)
+idades[-3]
+
+# alterando mais de um valor ao mesmo tempo
+idades[c(1,3)] = c(54, 68)
+idades
+
+# gerar sequência adicionando valor a cada elemento
+5:29 + 1
+1:6 + c(1,3)
+seq(1, 10) + 1
+
+# funções de ordenação
+
+x = c(19,42,5, 6, 3, 10, 10, 24)
+sort(x)
+
+# essa aqui é útil para achar qual o maior valor da sequência
+order(x)
+x = x[order(x)]
+x[length(x)]
+
+```
+### Exercícios 2
+
+1. Crie uma sequência regular de valores entre $0$ e $3000$ a cada $0.25$.
+
+2. Crie outro vetor com uma sequência de $1$ a $3000$ com $20$ elementos e subtraia do vetor da questão 1.
+
+3. No vetor resultante no item 2, qual a posição do menor e do maior valor?
+
+4. Ordene o vetor do item 3 e separe em dois objetos os $10$ menores e os $10$ maiores
+
+5. Rearranje o vetor x = 1:100 de forma que o novo vetor inicie com os valores das posições $25$ e $50$ e termine como os valores das posições $60$ a $72$.
+
+6. Ordene o vetor do item 7 de forma decrescente. 
+
+7. Crie um vetor de tamanho $200$, onde os $80$ primeiros tem valor $20$ e os demais valor $37$.
+```{r}
+
+# 1
+vetor1 = seq(1,3000, by=0.25)
+
+# 2
+vetor2 = seq(1,3000, length = 20)
+vetor3 = vetor2 - vetor1
+
+# 3
+vetor3 = vetor3[order(vetor3)]
+maior = vetor3[length(vetor3)]
+maior
+
+
+# 4
+
+v3_menor = vetor3[1:10]
+v3_menor
+v3_maior = vetor3[length(vetor3)-10:length(vetor3)]
+v3_maior
+
+```
+
