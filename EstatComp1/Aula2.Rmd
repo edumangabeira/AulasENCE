@@ -1,0 +1,123 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Aula 2
+
+# matrizes
+```{r}
+
+identidade = matrix(c(1,0,0,0,1,0,0,0,1), 3, 3)
+identidade
+
+# acessando linhas ou colunas inteiras
+identidade[, 3]
+identidade[2, ]
+
+# acessar posição
+identidade[1,2]
+
+# alterar linha
+identidade[1, ] = c(2,3,4)
+identidade
+
+# adicionar coluna(precisa do mesmo número de linhas)
+identidade = cbind(identidade, c(2,2,2))
+identidade
+
+# adicionar nova linha (precisa do mesmo número de colunas)
+identidade = rbind(identidade, c(1,6,7,9))
+identidade
+
+```
+
+## rbind e cbind
+
+No exemplo abaixo, a operação menos custosa é row bind. Pesquise o motivo disso.
+
+```{r}
+m = matrix(c(2,2), 2, 2)
+
+mr = rbind(m,m)
+mr
+
+mc = cbind(m,m)
+mc
+  
+```
+# Data frame
+
+## Criando um data frame
+
+```{r}
+nome = c("Joel", "Simão", "Jancarlos")
+nota1 = c(7,9,5)
+nota2 = c(7, 6, 10)
+df = data.frame(nome, nota1, nota2)
+df
+```
+### Ordenando um data frame
+
+```{r}
+# como ordenar por uma coluna específica
+df[order(df$nota1), ]
+```
+
+# listas
+
+deve ser a notação mais esquisita que eu já vi para acessar elementos.
+
+```{r}
+l = list(c(1:10), df, 3 , "banana")
+l[[2]]
+l[[4]]
+
+
+names(l) = c("A","B", "C", "D")
+l
+```
+
+# factor
+
+Provavelmente é exclusivo da linguagem. Nada mais é que a variável categórica, nominal ordinal. Tem diversas aplicações principalmente em modelagem.
+```{r}
+# ?rep()
+p_sexo = c(rep("male", 3), rep("female", 2))
+p_sexo
+
+# ?factor()
+p_sexo = factor(p_sexo)
+p_sexo
+
+p_sexo = factor(p_sexo, levels=c("male","female"))
+p_sexo
+
+p_sexo = factor(p_sexo, labels=c("malex", "female"))
+p_sexo
+
+p_sexo = c(rep("male", 3), rep("female", 2))
+p_sexo = factor(p_sexo, levels=c("male","female"),labels=c("malex", "female"))
+p_sexo
+
+```
+
+## Exercícios
+
+1. Crie uma matriz com 20 linhas e 20 colunas com diferentes números ímpares.
+
+2. Crie uma nova matriz com as colunas pares da matriz do item 1.
+
+3. Na matriz do item 2 inclua uma coluna, na última posição, com valores iguais ao número de linhas.
+
+4. Na matriz do item 3 inclua uma linha, na primeira posição, com valores iguais ao número de coluna.
+
+5. Crie uma matriz de 2 linhas e 2 colunas com letras e coloque-a(substitua) no centro da matriz do item 2. O que aconteceu com a matriz?
+
+6. Crie uma matriz com 4 linhas iguais a: 1, 2, 3, 4. Faça um teste para verificar se todos os elementos da coluna 1 são iguais a 1.
+
+
+```{r}
+
+```
+
