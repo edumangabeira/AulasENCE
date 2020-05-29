@@ -136,11 +136,21 @@ x[length(x)]
 # 1
 vetor1 = seq(1,3000, by=0.25)
 
+length(vetor1)
 # 2
 vetor2 = seq(1,3000, length = 20)
+
+length(vetor2)
 vetor3 = vetor2 - vetor1
 
+
+```
+
+
+```{r}
 # 3
+
+
 vetor3 = vetor3[order(vetor3)]
 maior = vetor3[length(vetor3)]
 maior
@@ -153,5 +163,32 @@ v3_menor
 v3_maior = vetor3[length(vetor3)-10:length(vetor3)]
 v3_maior
 
+
+# 5
+
+
+# 6
+
+
+# 7
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

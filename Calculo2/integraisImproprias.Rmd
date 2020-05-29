@@ -1,0 +1,128 @@
+---
+title: "Integrais Impróprias"
+author: "Eduardo Freire Mangabeira"
+date: "11 de maio de 2020"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br>
+
+## Primeira integral
+
+<br>
+$$\int_{0}^{4} \frac{dx}{x^2 + x - 6} $$
+Por que esta integral é imprópria? Se $x^2 + x - 6 = 0$, então a função não está definida em $x = -3$ e $x = 2$, raízes dessa equação. Portanto, existe uma discontinuidade infinita no intervalo e por definição esta integral é imprópria. Como $[0,4]$ é o intervalo de interesse só é preciso se preocupar com a assíntota em $x = 2$ ao se integrar a função.
+
+Então:
+$$\int_{0}^{4} \frac{dx}{x^2 + x - 6} = \lim_{t\to\ 2^-} \int_{0}^{t} \frac{dx}{x^2 + x - 6}  + \lim_{t\to\ 2^+} \int_{t}^{4} \frac{dx}{x^2 + x - 6} $$  
+<br>
+
+#### Resolvendo a integral não definida
+
+$$\int_{} \frac{dx}{x^2 + x - 6}$$
+
+O primeiro passo é fatorar a equação no denominador 
+
+
+$$\int_{} \frac{dx}{(x+3)  (x-2)}$$
+E logo após integrar a função por frações parciais
+
+$$\frac{1}{(x+3)  (x-2)} = \frac{A}{(x-2)} + \frac{B}{(x+3)}$$
+
+$$1 = \ (x+3)A + \ (x-2)B$$
+$$ A = \frac{1}{5}$$
+$$ B = - \frac{1}{5}$$
+<br>
+
+#### Voltando à integral...
+
+
+$$\int_{} \frac{dx}{x^2 + x - 6} = \int_{} \frac{dx}{5(x-2)} + \int_{} \frac{dx}{(-5)(x+3)} $$
+
+$$ = \frac{1}{5} \int_{} \frac{dx}{(x-2)} - \int_{} \frac{dx}{(x+3)} $$
+<br>
+
+Integrando os dois membros por substituição simples, obtém-se o seguinte resultado:
+
+$$ \int_{} \frac{dx}{x^2 + x - 6} = \frac{1}{5}(  ln|x-2| - ln|x+3|) + C $$
+<br>
+
+Mas essa ainda é apenas a integral indefinida, onde $C$ é uma constante arbitrária.
+
+Vamos voltar ao problema de resolver a integral imprópria.
+
+
+$$\int_{0}^{4} \frac{dx}{x^2 + x - 6} = \lim_{t\to\ 2^-} \int_{0}^{t} \frac{dx}{x^2 + x - 6}  + \lim_{t\to\ 2^+} \int_{t}^{4} \frac{dx}{x^2 + x - 6}  $$  
+<br>
+
+Resolvendo para cada uma das parcelas:
+
+
+
+$$\lim_{t\to\ 2^-} \int_{0}^{t} \frac{dx}{x^2 + x - 6} =\lim_{t\to\ 2^-}  (\frac{1}{5}(  ln|x-2| - ln|x+3|)) \Big|_0^t$$
+$$ =\lim_{t\to\ 2^-}  (\frac{1}{5}(  ln|x-2| - ln|x+3|)) \Big|_0^t$$
+<br>
+
+Neste caso, se $t$ tende a $2$ pela esquerda, $ln|x-2| = ln(0)$, valor que não está definido para esta função. Portanto, esta integral DIVERGE.
+
+<br>
+
+## Segunda integral
+
+<br>
+
+$$\int_{-\infty}^{\infty} xe^{-x^2} dx $$
+<br>
+
+Essa integral é imprópria pois os limites de integração vão para $-\infty$ e $\infty$. Para calcular essa integral é preciso dividi-la em duas a partir de um ponto contido nesse intervalo. Eu escolhi $x=0$.
+
+<br>
+
+$$\int_{-\infty}^{\infty} xe^{-x^2} dx = \int_{-\infty}^{0} xe^{-x^2} dx + \int_{0}^{\infty} xe^{-x^2} dx$$
+$$ = \lim_{t\to\ -\infty} \int_{t}^{0} xe^{-x^2} dx + \lim_{t\to\ \infty}\int_{0}^{t} xe^{-x^2} dx $$
+<br>
+
+Resolvemos primeiro a integral indefinida por substituição simples:
+
+
+$$\int_{} xe^{-x^2} dx$$
+$u = -x^2$
+<br>
+$du = -2xdx$
+
+$$-\frac{1}{2}\int_{} e^{u} du = - \frac{ e^{-x^2}}{2} + C$$
+<br>
+Onde $C$ é uma constante arbitrária.
+
+#### Voltando à integral imprópria....
+
+<br>
+
+$$ \int_{-\infty}^{\infty} xe^{-x^2} dx =\lim_{t\to\ -\infty}  \ -\frac{  e^{-x^2}}{2} \Big|_t^0  + \lim_{t\to\ \infty}  \ - \frac{ e^{-x^2}}{2} \Big|_0^t$$
+
+
+$$ =\lim_{t\to\ -\infty}  \ \frac{ e^{-x^2}}{2}   + \lim_{t\to\ \infty}  \ - \frac{ e^{-x^2}}{2} $$
+<br>
+
+Essas duas parcelas vão se anular, portanto:
+
+<br>
+$$ \int_{-\infty}^{\infty} xe^{-x^2} dx = 0 $$
+<br>
+
+E podemos dizer que a integral converge para zero.
+
+
+<br>
+<br>
+
+
+
+

@@ -1,0 +1,99 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Considere o dataset mtcars que é nativo do R e responda as perguntas abaixo.
+
+Use o help do RStudio para entender as variáveis deste dataset.
+
+```{r}
+?mtcars
+```
+
+Qual a dimensão de mtcars?
+
+```{r}
+dim(mtcars)
+```
+
+Converta o consumo de cada modelo para km/l e anexe uma nova coluna “kml”.
+
+```{r}
+kml <- mtcars$mpg
+dataset <- cbind(mtcars, kml)
+```
+
+
+Quais as quantidade de cilindros possíveis dentre os modelos relacionados?
+
+```{r}
+unique(mtcars$cyl)
+# 4, 6 e 8 cilindros
+```
+
+
+Quantos modelos há por tipo de transmissão?
+
+```{r}
+unique(mtcars$am)
+# automática e manual
+```
+
+Quais são os modelos com maior consumo por tipo de transmissão? Relacione apenas os três
+com maior consumo para cada grupo.
+
+```{r}
+automatic <- dataset[dataset$am==0,]
+manual <- dataset[dataset$am==1,]
+
+consumo <- data.frame(automatic = nrow(automatic), manual = nrow(manual))
+
+consumo_ordem <- dataset[order(dataset$am, dataset$mpg), c("kml","am","hp")]
+
+consumo_auto <- consumo_ordem[consumo_ordem$am== "automatic"][1:3,]
+
+```
+
+
+Ordene o data frame pelo modelo.
+
+```{r}
+
+
+```
+
+
+Ordene as colunas por ordem alfabética.
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

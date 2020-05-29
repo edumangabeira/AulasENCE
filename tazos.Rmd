@@ -1,0 +1,48 @@
+---
+title: "Experimento dos tazos"
+output:
+  html_document:
+    df_print: paged
+---
+
+Eu estou colecionando tazos da batata lay's e pensei em fazer um rascunho de como seria a probabilidade do próximo $i$ tazo ser um novo, diferente dos $k$ tazos que eu já possuo e logo após disso avaliar quantos sacos de batata eu preciso comprar em média para completar a coleção.
+
+
+## Simulando
+
+Primeiro simulei o experimento em Python para enxergar o resultado por força bruta. Quando o número de repetições do experimento é $\geq 200000$, em média são necessárias 72 tentativas para conseguir completar a coleção de tazos. Posso estudar como reduzir a complexidade do algoritmo mais tarde, a execução é bem lenta. Meu objetivo atual é expressar esse experimento em termos de probabilidade.
+
+
+```{python}
+import random as rd
+import statistics as st
+
+def colecionarTazos(experimentos, colecionaveis):
+
+  obtidos=[]
+  repetidos=[]
+  tentativas = 0
+  
+  while(len(obtidos) < 20):
+  
+      novo = rd.randint(1, colecionaveis)
+      if novo not in obtidos:
+        obtidos.append(novo)
+      else:
+        repetidos.append(novo)
+      tentativas += 1
+      
+  experimentos.append(tentativas)
+
+experimentos = []
+colecionaveis = 20
+rep_experimento = 100000
+
+
+for i in range(1, rep_experimento):
+  colecionarTazos(experimentos, colecionaveis)
+
+print(st.mean(experimentos))
+```
+
+

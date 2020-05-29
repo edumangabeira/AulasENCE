@@ -1,0 +1,198 @@
+---
+title: "title"
+author: "Eduardo Freire Mangabeira"
+date: "12 de maio de 2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tinytex)
+options( tinytex.verbose = TRUE)
+```
+
+<br>
+
+## 1) Seção 7.8
+
+<br>
+
+### 10. $\int_{- \infty}^{0} 2^r dr$
+
+<br>
+
+A integral é imprópria já que um de seus limites de integração é $-\infty$.
+
+$$\int_{- \infty}^{0} 2^r dr$$
+<br>
+
+Para resolver a integral basta aplicar a regra da potência.
+
+<br>
+
+$$\int_{- \infty}^{0} 2^r dr = \lim_{t\to\ -\infty} 2^rdr$$
+$$ = \lim_{t\to\ -\infty} \frac{2^r}{ln|2|} \Big|_t^0 $$
+$$ = \lim_{t\to\ -\infty} - \frac{2^t}{ln|2|} = 0$$
+<br>
+
+Portanto a integral converge para zero.
+
+<br>
+
+### 27. $\int_{0}^{1} 3x^{-5} dx$
+
+<br>
+
+$$\int_{0}^{1} 3x^{-5} dx $$
+<br>
+
+Essa integral é imprópria, pois existe uma descontinuidade em $x=0$.
+
+O método de resoluçãoo é direto e segue abaixo:
+
+<br>
+
+$$\int_{0}^{1} 3x^{-5} dx $$
+$$\int_{0}^{1} 3x^{-5} dx = \lim_{t\to\ 0} 3 \int_{t}^{1} x^{-5} dx$$
+
+$$= 3\lim_{t\to\ 0} \Big[\frac{x^{-4}}{-4}\Big]\Big|_t^1 $$
+
+
+$$= 3\lim_{t\to\ 0} (- \frac{1}{4} + \frac{t^{-4}}{4}) $$
+Como $t$ tende a zero essa função vai crescer infinitamente. Portando a integral é DIVERGENTE.
+
+
+<br>
+
+## 1) Seção 8.5
+
+<br>
+
+#### Aplicaçãoo em probabilidade
+
+<br>
+
+### 5. Seja $f(x) = \frac{c}{1+x^2}$
+
+<br>
+
+### a. Para qual valor de $c$ é $f$ uma função densidade de probabilidade?
+
+<br>
+
+Para responder a essa pergunta, primeiramente é necessário lembrar de uma propriedade importante de uma função de densidade de probabilidade $f$:
+
+<br>
+
+$$\int_{- \infty}^{\infty} f(x)dx = 1$$
+
+<br>
+
+Logo, como temos $f(x) = \frac{c}{1+x^2}$:
+
+<br>
+
+
+$$\int_{- \infty}^{\infty} \frac{c}{1+x^2}dx = 1$$
+
+<br>
+
+
+Vamos começar resolvendo a integral indefinida. Essa integral é conhecida.
+
+<br>
+
+$$\int_{} \frac{c}{1+x^2}dx$$
+
+$$ = c \int_{} \frac{dx}{1+x^2}$$
+$$ = arctg(x) + C$$
+
+<br>
+
+#### Voltando à integral definida
+
+<br> 
+
+Escolhi dividir o intervalo em $x=0$, mas poderia ser outra constante arbitrária dentro do intervalo.
+
+$$\int_{- \infty}^{\infty} \frac{c}{1+x^2}dx = \lim_{t\to\ -\infty} \int_{t}^{0}  \frac{c}{1+x^2}dx  + \lim_{t\to\ \infty} \int_{0}^{t} \frac{c}{1+x^2}dx$$
+<br>
+
+Usando a integral anterior e uma propriedade de limite que permite isolar a constante do resto da função:
+
+<br>
+
+
+$$ =  c \Big[\lim_{t\to\ -\infty}  arctg(x) \Big|_t^0  + \lim_{t\to\ \infty} arctg(x)dx \Big|_0^t \Big] $$
+
+$$ =  c \Big[\lim_{t\to\ -\infty}  - arctg(t)  + \lim_{t\to\ \infty} arctg(t)\Big] $$
+ 
+
+$$ =  c \Big[\lim_{t\to\ -\infty}  - arctg(t)  + \lim_{t\to\ \infty} arctg(t)\Big] $$
+
+
+$$ =  c \Big[\frac{\pi}{2}  + \frac{\pi}{2} \Big] = 1$$
+
+$$   c = \frac{1}{\pi} $$
+<br>
+
+Abaixo segue um gráfico da função $f(x) = arctg(x)$ ilustrando como os limites convergem para os valores encontrados acima.
+
+<br>
+
+
+
+
+```{r}
+x= seq(-2*pi,2*pi,0.1)
+y = atan(x)
+plot(x,y, type="l")
+
+```
+ 
+<br>
+
+<br>
+ 
+### b. Para este valor de $c$, encontre $P(-1<X<1)$.
+
+<br>
+
+Para encontrar esta probabilidade, basta integrar a função de $-1$ até $1$, não há nenhuma descontinuidade neste intervalo.
+
+<br>
+
+
+$$\int_{-1}^{1} \frac{dx}{\pi(1+x^2)} $$
+$$= \frac{1}{\pi} \int_{-1}^{1} \frac{dx}{(1+x^2)} $$
+
+$$= \frac{1}{\pi} \Big[arctg(t)\Big] \Big|_{-1}^{1} = \frac{1}{\pi} \Big[arctg(1) - arctg(-1)\Big] $$
+
+
+$$= \frac{1}{\pi} \Big[arctg(1) - arctg(-1)\Big]$$
+<br>
+
+Podemos usar a calculadora do R para encontrar esse resultado.
+
+<br>
+
+```{r}
+x = (atan(1)-atan(-1))/pi
+x
+```
+
+<br>
+
+Portanto, encontramos que a probabilidade deste evento ocorrer é:
+
+<br>
+
+
+$$P(-1<X<1) = \int_{-1}^{1} \frac{dx}{\pi(1+x^2)} = 0.5 $$
+<br>
+
+<br>
+
+<br>

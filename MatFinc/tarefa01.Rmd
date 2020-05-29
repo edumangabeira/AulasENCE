@@ -1,0 +1,128 @@
+---
+title: "Eduardo Freire Mangabeira 202010111-40"
+output:
+  html_document:
+    df_print: paged
+---
+
+<br>
+
+# Tarefa 1
+
+<br>
+
+## 1ª Questão : Um título de R$ 24.000,00 vence daqui a 10 meses
+
+### 1. Qual o seu valor atual, se a taxa de juros simples para esse título hoje for de 2,2% a.m.?
+
+<br>
+
+Primeiro é preciso estabelecer as variáveis. $C$ representa o valor atual e $M$ o valor nominal. A variável $j$ corresponde à taxa de juros, $i$ ao tempo até o vencimento e $D$ ao desconto(análogo ao total de juros de uma aplicação, decidi chamar assim por conta da situação da questão).
+
+A fórmula que corresponde ao valor atual é:
+
+<br>
+
+$$ C = M - D $$
+
+<br>
+
+Onde:
+
+$$ D = M \times i \times j $$
+Logo, usando os dados fornecidos:
+
+
+$$ D = 24000 \times 0.022 \times 10 = 5280 $$
+$$ C = 24000 - 5280 = 18720 $$
+<br>
+
+### 2. Qual o seu valor atual 3 meses antes do vencimento, se neste momento a taxa de juros simples para esse título for de 2,6% a.m.?
+
+<br>
+
+As fórmulas usadas no primeiro item podem ser reduzidas a uma apenas:
+
+<br>
+
+$$ C = M(1-i\times j)$$
+Portanto, aplicando para os dados do item 2:
+
+<br>
+
+$$ C = 24000(1-3\times0.026) = 22128$$
+<br>
+
+### 3. Qual o seu valor atual 65 dias antes do vencimento, se nesta data a taxa de juros simples para esse título for de 2,1% a..m?
+
+<br>
+
+Para este basta lembrar de normalizar o tempo de acordo com a taxa dada.
+
+<br>
+
+$$ C = 24000\Big(1-\frac{65}{30}\times0.026\Big) = 22648$$
+
+<br>
+
+## 2ª Questão : Um capital de 50.000,00 reais rendeu em juros compostos 1.000,00 reais em um determinado prazo. Se o prazo fosse dois meses maior, o rendimento aumentaria em R$ 2.060,40. Calcule a taxa de juros ao mês ganha pela aplicação e o prazo em meses.
+
+<br>
+
+Usando a fórmula de juros compostos, é possível montar um sistema de equações.
+
+$$ M = C(1+j)^i $$
+
+<br>
+
+Onde $C$ é o capital inicial, $M$ é o montante $j$ é taxa de juros e $i$ é o tempo de aplicação.
+
+<br>
+
+Usando as informações fornecidas:
+
+<br>
+
+$$ \begin{cases}
+51000 = 50000(1+j)^i \\
+53060,40 = 50000(1+j)^{i+2}
+\end{cases} $$
+
+
+$$ \begin{cases}
+1,02 = (1+j)^i \\
+1,061208 = (1+j)^{i+2}
+\end{cases} $$
+
+
+$$ \begin{cases}
+0,01980263 = i\times log(1+j) \\
+0,05940788 = (i+2) \times log(1+j)
+\end{cases} $$
+
+$$ i  = \frac{0,01980263}{log(1+j)}  $$
+
+$$ 0,05940788 = \Big(\frac{0,01980263}{log(1+j)}+2\Big) \times log(1+j) $$
+
+$$ 0,05940788 = 0,01980263+2\times log(1+j)  $$
+$$ 0,01980263 = log(1+j)  $$
+$$ 10^{0,01980263} = 1+j  $$
+$$ j = 0,046653 $$
+<br>
+
+Logo, a taxa de juros corresponde a 4,6653 % a.m. O prazo pode ser calculado aplicando esse valor na fórmula original:
+
+
+<br>
+
+$$ 51000 = 50000(1+0,046653)^i $$
+$$ 1,02 = (1,046653)^i $$
+$$ log(1,02) = i \times log(1,023975) $$
+$$ 0,01980263 = i \times 0,4342924 $$
+$$ i = 0,4342924 $$
+Ou seja, o tempo de aplicação foi de 13 dias.
+
+
+<br>
+
+<br>

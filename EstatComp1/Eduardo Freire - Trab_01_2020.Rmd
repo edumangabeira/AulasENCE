@@ -1,0 +1,111 @@
+---
+title: "Estatística Computacional I"
+author: "Eduardo Freire Mangabeira"
+subtitle: 'Trabalho 02 - (21/05/2020) '
+output:
+  html_document:
+    df_print: paged
+---
+
+Orientações:
+
+1.  Responda as questões deixando o código R nos respectivos chunks
+2.  Mantenha os nomes de objetos solicitados na questão
+3.  Sempre deixe por último o objeto que responde a pergunta
+4.  Salve o arquivo com o seu nome
+5.  Execute o Preview para gerar o html
+6.  Envie o html e Rmd pelo CR
+7 . link do arquivo: [https://bit.ly/2WRHoXB]
+
+
+
+
+
+## 1- Leia o arquivo forbes2000.csv carregando-o em um objeto com nome df.
+
+```{r}
+
+df = read.csv("forbes2000.csv", sep=';')
+
+```
+
+
+A lista Forbes 2000 é um ranking das maiores empresas do mundo, medido por vendas, lucros, ativos e valor de mercado.
+
+
+
+
+## 2- Renomeie as colunas com os nomes a seguir, que já  estão na ordem das colunas como segue: rank, empresa, pais, categoria, vendas, lucro, ativo, valor).Mantenha o nome df.
+
+
+```{r}
+
+names(df)
+nome <- c('rank', 'empresa', 'pais', 'categoria', 'vendas', 'lucro', 'ativo', 'valor')
+colnames(df) <- nome
+nome
+
+```
+
+
+
+## 3- Quantos e quais países estão nesta lista?
+
+```{r}
+
+n_paises= NROW(df$pais)
+n_paises
+
+paises= df$pais
+unique(paises)
+
+```
+
+
+## 4- Qual são os 10 paises que aparecem com mais frequencia? Faça uma tabela com o nome do país e a frequencia.
+
+```{r}
+
+paises_10_mais <- sort(table(df$pais),decreasing=TRUE)[1:10]
+paises_10_mais
+
+```
+
+## 5- Quantas e quais são as empresas brasileiras? A lista de empresas deve estar em ordem alfabética
+
+```{r}
+
+nrow(df[df$pais=='Brazil', ])
+brasil <- df[df$pais=='Brazil', ]
+brasil <- brasil[order(brasil$empresa), ]
+head(brasil)
+
+
+```
+
+
+## 6- Compare os valor médio das empresas brasileiras com as demais empresas. Calcule a média e variância. O resultado deve ser uma tabela com as colunas País,Média_Vendas e Média_Vendas.  
+
+```{r}
+valores_br = as.numeric(gsub(",",".", brasil$valor))
+
+valores_wr = df[df$pais != 'Brazil',]
+valores_wr = as.numeric(gsub(",",".", df$valor))
+
+comparacao <- matrix(c("Brasil","Resto do Mundo", mean(valores_br),mean(valores_wr), var(valores_br), var(valores_wr)),ncol=3,byrow=F)
+
+colnames(comparacao) <- c("País","Média_Valores","Variância_Valores")
+tabela <- as.table(comparacao)
+tabela
+
+
+```
+
+
+## 7- Utilize  o boxplot para a comparação da questão 06  
+
+```{r}
+
+# usei log para ficar numa escala melhor
+boxplot(log(valores_br), log(valores_wr), ylab="log(Valores)", main = "Valor das empresas: Brasil vs Resto do Mundo", names = c("Brasil", "Mundo"))
+```
