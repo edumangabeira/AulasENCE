@@ -6,8 +6,8 @@
 
 links com trabalho final:
 
-relatório - https://rpubs.com/Edumangabeira/645249
-apresentação - https://rpubs.com/Edumangabeira/645422https://rpubs.com/Edumangabeira/645249
+- relatório - https://rpubs.com/Edumangabeira/645249
+- apresentação - https://rpubs.com/Edumangabeira/645422https://rpubs.com/Edumangabeira/645249
 
 ### Probabilidade I
 
