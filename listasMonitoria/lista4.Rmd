@@ -1,0 +1,110 @@
+---
+title: "Lista 4 - Entrega 30/10"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aviso
+
+**Apenas as cinco primeiras questões da lista serão avaliadas. As cinco últimas são para prática e possuem gabarito, portanto o envio não é necessário.**
+
+
+<br>
+
+1 - Seja X uma variável aleatória com a seguinte distribuição:
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c|c| }
+ \hline
+ $X$ & -1 & 0 & 1 & 2 \\
+ \hline
+ $f_X(x)$ & 0.2 & 0.5 & 0.2 & 0.1 \\
+ \hline
+\end{tabular}
+\end{center}
+
+Calcule $E[X^2]$
+
+
+2 - Considere uma variável aleatória definida por Z:"resultado obtido ao rolar um dado", sendo que as faces pares possuem o dobro da probabilidade de ocorrência em relação às faces ímpares. Calcule E[Z] e Var[Z].
+
+
+3 - Seja X uma variável aleatória com valor esperado $\mu$ e variância $\sigma^2$. Determine o valor esperado de:
+
+$$Y = \frac{X - \mu}{\sigma}$$
+
+
+4 -  Uma caixa contém 5 bolas de gude vermelhas e 5 azuis. Duas bolas de gude são
+retiradas aleatoriamente. Se elas tiverem a mesma cor, você ganha 1,10 reais; se elas tiverem cores diferentes, você perde 1 real. Calcule:
+
+(a) o valor esperado da quantia que você ganha;
+
+(b) a variância da quantia que você ganha;
+
+(c) o desvio padrão da quantia que você ganha.
+
+
+5 - Chamamos ${I_A}$ de variável aleatória indicadora da ocorrência do evento ${A}$, quando ${I_A=1}$ se ${A}$ ocorre e ${I_A=0}$ se ${A^c}$ ocorre, ou ainda, para todo ${\omega\in\Omega}$
+
+$$\displaystyle   I_A(\omega) = \begin{cases} 1 & \text{ se }\omega\in A;\\ 0 & \text{ se }\omega\not\in A.\\ \end{cases} \ \ \ \ \ $$
+
+
+Seja Y a variável aleatória definida pelo resultado do lançamento de um dado de 6 faces. Encontre o desvio padrão de Y, onde a distribuição de Y é dada por: $f_Y(y)=\frac{1}{18}I_{Y > 3}(y) + \frac{5}{18}I_{Y \leq 3}(y), y = 1,2,...,6$
+
+
+
+6 - Um inteiro N é selecionado aleatoriamente de ${1,2, ...,(10)^3}$, onde cada um dos números tem a mesma probabilidade de ser selecionado. Qual é a probabilidade de que N seja divisível por 3? por 15? Como sua resposta mudaria se $(10)^3$ fosse trocado por $(10)^k$ à medida que k se tornasse cada vez maior?
+
+
+7 - Prove que $Var(aX +b) = a^2Var(X)$
+
+
+
+8 - A cada noite diferentes meteorologistas nos dão a probabilidade de chuva no dia seguinte. Para julgar quão boa é a previsão do tempo feita por essas pessoas, vamos classificá-las da forma a seguir: se um meteorologista diz que choverá com probabilidade $p$, então ele ou ela receberá uma nota de: 
+
+* $1 - (1 -p)^2$ se chover
+
+* $1 -p^2$ se não chover
+
+Vamos então anotar as notas ao longo de um determinado período de tempo e concluir que o meteorologista com a maior
+nota média é aquele que melhor prevê o tempo. Suponha agora que certo meteorologista esteja ciente de nosso mecanismo de notas e queira maximizar sua nota esperada. Se essa pessoa acredita verdadeiramente que choverá amanhã com probabilidade $p*$, que valor de $p$ ele ou ela deve declarar de forma a maximizar a nota esperada?
+
+
+
+9 - Uma empresa do ramo alimentício produz batatinhas fritas e dentro de cada embalagem vem de brinde um tazo sortido colecionável. Os tazos são estampados com as mulheres cientistas mais influentes da história. Ao todo, são 20 tazos distintos. Virginia é uma colecionadora e quer saber se vale a pena gastar seu dinheiro para completar essa coleção. Como ela é muito esperta, decidiu realizar simulações por meio de um programa de computador para descobrir quantos sacos em média ela precisa comprar para completar a coleção. Em uma dessas simulações, para $X$:"número de sacos comprados em 8 tentativas", ela obteve os seguintes resultados: 78, 110, 89, 68, 157, 136, 92, 120.
+
+Suponha que as 8 tentativas sejam suficientes para dizer que a média de compras realizadas para completar a coleção é igual a $E[X]$. Sabe-se ainda que cada saco custa 7 reais e Virginia quer gastar no máximo 840 reais. Com isso, no pior dos casos possíveis, qual a probabilidade de Virginia gastar pelo menos 840 reais?
+
+Dica: Use a desigualdade de Markov, $P(X \geq k) \leq \frac{E[X]}{k}$
+
+
+10 - **Desafio:** Encontre o segundo momento de X, onde $P(X=x) = {n\choose x} p^x (1-p)^{x-k}$, $x = 1, 2, ..., n$.
+
+Dica: Usar teorema binomial(Binômio de Newton)
+
+
+## Gabarito
+
+6 - X: "é divisível por 3"
+    Y: "é divisível por 7"
+
+$P(X) = \frac{333}{1000}$ \ $P(Y) = \frac{142}{1000}$
+
+$\frac{\frac{10^k}{3}}{10^k} = \frac{1}{3}$ , o mesmo vale para Y.
+
+
+7 - Este resultado é importante e pode ser encontrado em muitos livros-texto(Barry James, por exemplo). Lembre da linearidade da esperança, mostrada por: $E(X) = aX + b = aE[X] +b$
+
+8 - $p = p*$
+
+9 - 0,88541.
+
+10 - $n(1-p)p^2 + np$
