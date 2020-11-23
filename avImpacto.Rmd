@@ -1,0 +1,362 @@
+---
+title: "Avaliação de impacto de políticas públicas"
+author: "Eduardo Freire"
+date: "31/10/2020"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# O que é uma política pública?
+
+## Políticas públicas
+
+Existem diferentes percepções sobre a definição:
+
+- "o que o governo escolhe fazer ou não fazer"(Thomas Dye, 1975).
+- “Não há definição de políticas públicas precisa e universal (...). Há uma visão
+comum de que as políticas públicas envolvem o processo de fazer escolhas e os
+resultados das escolhas; de que o que faz as políticas públicas realmente “públicas"
+é que essas escolhas se baseiam nos poderes coercitivos do Estado, e que, em
+sua essência, política pública é uma resposta a um problema percebido” (Smith
+e Larimer, 2009)
+
+## Políticas públicas
+
+- Motivadas por interesses, ideologias, valores e necessidades inerentes a cada período histórico.
+
+- Dependem de gastos do setor público ou privado com o objetivo
+de encontrar a solução de um problema que afeta a população de um local, provendo bens e/ou serviços.
+
+- Um bom planejamento e uma sólida base teórica não são garantia de uma política pública de sucesso, mas são passos essenciais para atingir os objetivos estabelecidos.
+
+- Ao longo da história, políticos ou stakeholders não costumavam ter as ferramentas para avaliar experimentalmente os efeitos de um programa social sobre uma população. Hoje se fala cada vez mais em "políticas públicas baseadas em evidências".
+
+
+# Ciclo de uma política pública
+
+## Ciclo de uma política pública
+
+Identificação do problema:
+
+- Qual é o problema a ser solucionado?
+- Quais são suas causas e consequências?
+- Qual a distância entre o problema e a potencial solução?
+
+Formulação da política:
+
+- Qual é o programa?
+- Qual é a teoria do programa?
+- Como o programa pretende alcançar os resultados esperados?
+- Existe evidência anterior que baseia este programa?
+
+## Ciclo de uma política pública
+
+Implementação:
+
+- O programa está sendo implementado como planejado?
+
+Tomada de decisão:
+
+- O programa deve ser redesenhado, expandido ou descontinuado?
+
+**Avaliação**:
+
+- **Qual é o impacto do programa**?
+- Quanto precisou ser investido para alcançar esse impacto?
+- Como os custos se comparam com os outros benefícios gerados pelo programa?
+
+
+## Políticas públicas
+
+
+- Como e por que uma política pública funciona? É possível mensurar?
+
+- Observar microescolhas dos agentes econômicos após certos estímulos pode ser útil para verificar quais decisões tomadas pelos formuladores da política pública tiveram efeito no grupo contemplado.
+
+- Nos últimos 20 anos as ciências econômicas passaram pela chamada "revolução experimental", que hoje permite análises e modelos mais robustos de fenômenos sociais por meio de técnicas econométricas.
+
+## Exemplos de perguntas
+
+
+- Ampliar o alcance da iluminação pública reduz número de assaltos?
+
+(Zhou et al., 2019)
+
+<center>
+![](ilumi.jpg)
+</center>
+
+## Exemplos de perguntas
+
+- Um programa de habitação básica facilita a entrada no mercado de trabalho?
+
+(H.G. Ferreira et al., 2008)
+
+<center>
+![](casa.jpg)
+</center>
+## Exemplos de perguntas
+
+- A política de cotas para ingresso em universidades públicas aumenta a renda familiar de minorias? 
+
+<center>
+![](cotas.jpg)
+</center>
+
+# Avaliação de impacto
+
+## Tipos de avaliação
+
+Existem tipos distintos de avaliação de um programa social ou política pública:
+
+- Avaliação de desempenho
+- Avaliação teórica
+- Avaliação de processos
+- **Avaliação de impacto**
+
+No caso será falado apenas sobre avaliação de impacto, que verifica **efeitos causais** do programa.
+
+## Quando avaliar impacto?
+
+Avalia-se impacto para:
+
+- Prestar contas e tornar gasto público mais eficiente.
+- Gerar conhecimento e aprendizagem para o futuro.
+- Melhorar a intervenção(desenho, gestão, resultados) e Informar a tomada de decisão.
+- Saber o que funciona e como funciona.
+
+Nem sempre é interessante avaliar o impacto de uma política pública, pois costuma ser caro. Porém, em algumas situações é melhor arcar com os custos de avaliar impacto do que lidar com as consequências de uma política mal desenhada. Mesmo que não seja encontrado efeito positivo no programa, essa informação também é importante para que as decisões erradas não sejam repetidas futuramente.
+
+
+## Como avaliar impacto?
+
+- Existem diversos métodos para fazer uma avaliação de impacto, com prós e contras. Quando se quer avaliar impacto se quer determinar efeitos causados EXCLUSIVAMENTE pelo programa. Ou seja, é preciso separar o efeito do programa de outras variáveis que podem afetar os resultados observados. Uma avaliação bem feita acontece quando se toma todos os cuidados para evitar que externalidades interfiram no experimento.
+- É preciso definir exatamente o que é impacto para estabelecer modelos.
+
+## O que é impacto?
+
+Impacto pode ser compreendido como a diferença entre duas situações:
+
+- Resultados que os participantes do programa obtêm um tempo depois de participar do programa.
+
+- Um **contrafatual**: Resultados que esses mesmos participantes teriam obtido nesse mesmo momento no caso hipotético de não terem participado do programa.
+
+Ou seja, o impacto é dado pelo resultado com o programa menos o resultado sem o programa.
+
+
+## Contrafatual
+
+- Porém, como o contrafatual é um cenário hipotético, não é observável. Para obter esse resultado é preciso replicar ou construir o contrafatual.
+
+- Isso pode ser feito selecionando uma amostra do grupo de interesse e a dividindo em dois grupos: um recebe o programa(**tratamento**) e um grupo é para comparação(**controle**). A escolha dos grupos pode ser feita de diversas formas e essa é etapa é crucial para o desenho da avaliação.
+
+## Métodos de avaliação de impacto
+
+- A principal diferença entre eles é a forma de estimar o contrafatual.
+
+- Métodos não experimentais: Antes e depois, Diferença simples.
+
+- Métodos quasi-experimentais: Regressão multivariada, Diferenças em diferenças, Pareamento, regressão descontínua
+
+- **Método experimental**: Seleção aleatorizada de grupos de tratamento e controle.
+
+## Exemplo
+
+- Não serão explicados com detalhes todos os métodos, mas será usado um exemplo abaixo para explicar alguns.
+
+- Suponha que um governo tenha implementado um programa de expansão de creches.
+
+- Objetivo: Entrada de mães jovens no mercado de trabalho, aumentando a renda familiar.
+
+- Público alvo: Mães de 16-25 anos de baixa renda.
+
+- Vamos medir o impacto do programa sobre a taxa de emprego de mães jovens.
+
+
+## Antes e depois
+
+- Mede como os participantes mudam ao longo do programa e o grupo de controle são os mesmos participantes, mas antes de entrar no programa. Uma premissa muito forte do método é que não há fatores relevantes no tempo que afetem o resultado do programa, o que leva muitas vezes a superestimar o efeito do programa.
+
+- No nosso exemplo, suponha que antes do programa a taxa de emprego de mães jovens era de 30% e após o programa passou a ser de 54%. fazendo $54-30 = 24$, temos 24 p.p. de diferença. Ou seja, o programa teve um **efeito positivo de 80%**.
+
+
+## Antes e depois
+
+```{r, warning=FALSE}
+library(ggplot2)
+df <- data.frame(c("Antes", "Depois"), c(30,54))
+names(df) <- c("tempo", "taxa")
+
+p <- ggplot(data = df, aes(x = tempo, y = taxa, fill = tempo)) +
+  geom_bar(stat='identity') +
+  geom_text(aes(label=taxa), nudge_y = 2.5)
+
+p + labs(x=NULL, y = "taxa de emprego(%)", fill = NULL, title = "Taxa de emprego de mães jovens antes e depois do programa")
+```
+
+## Diferença simples
+
+- Mede a diferenças entre os participantes e os não participantes, **depois do programa**. O grupo de controle são os não participantes e os dados são recolhidos após o programa. Nesse caso, a premissa é que a única diferença entre os grupos é o programa(os dois grupos têm a mesma probabilidade de participar), o que pode levar a erros no efeito.
+
+- Suponha que a taxa de emprego de mães jovens **após participação no programa** é 54%. A taxa de emprego das que não participaram é de 52%. fazendo $54-52 = 2$, temos 2 p.p. de diferença. Ou seja, o programa teve um **efeito positivo de 3,84%**.
+
+## Diferença simples
+
+```{r, warning=FALSE}
+library(ggplot2)
+df <- data.frame(c("Não participantes", "Participantes"), c(52,54))
+names(df) <- c("tempo", "taxa")
+
+p <- ggplot(data = df, aes(x = tempo, y = taxa, fill = tempo)) +
+  geom_bar(stat='identity') +
+  geom_text(aes(label=taxa), nudge_y = 2.5)
+
+p + labs(x=NULL, y = "taxa de emprego(%)", fill = NULL, title = "Taxa de emprego de mães jovens depois do programa")
+```
+
+## Diferenças em diferenças
+
+- Combina os dois métodos anteriores, comparando a mudança no tempo da variável de
+resultado entre os dois grupos. E o grupo de controle são os não participantes, com dados antes e depois do programa. Ou seja, assume que as tendências entre os grupos  sem o programa se manteriam paralelas. Suponha que as taxas de emprego das mães sejam dadas pela tabela abaixo:
+
+```{r, warning=FALSE}
+library(kableExtra)
+library(magrittr)
+df <- data.frame(c('30%', '29%'),c('54%', '52%'), c('24', '23'), row.names = c("Participaram", "Não participaram"))
+names(df) <- c("Antes", "Depois", "Diferença p.p.")
+df %>%
+  kbl() %>%
+  kable_classic_2(full_width = F)
+```
+
+- Nesse caso fazemos $24 - 23 = 1$ e dizemos que houve um **aumento de 4,35% na taxa de emprego**.
+
+
+## Diferenças em diferenças
+
+```{r, warning=FALSE}
+library(ggplot2)
+df <- data.frame(c(30, 29, 54, 52), 
+                 c("Participantes", "Não participantes","Participantes", "Não participantes"),
+                 c("Antes","Antes", "Depois","Depois"), stringsAsFactors = F)
+names(df) <- c("taxa", "particip", "ant_post")
+
+p <- ggplot(data=df, aes(x=ant_post, y=taxa , fill=particip)) + 
+     geom_bar(position = 'dodge', stat='identity') +
+     geom_text(aes(label=taxa), position=position_dodge(width=0.9), vjust=-0.25)
+
+p + labs(x=NULL, y = "taxa de emprego(%)", fill = NULL, title = "Taxa de emprego de mães jovens antes e depois do programa") + ylim(0, 60)
+
+```
+
+## Aleatorização
+
+- Também conhecido como RCT(Randomized Controlled Trial), esse método vem ganhando cada vez mais credibilidade, principalmente após o prêmio Nobel de Economia de 2019 para Abhijit Banerjee, Esther Duflo e Michael Kremer.
+
+- A definição do grupo de tratamento é feita por sorteio e o grupo de controle deve ser **igual** ao grupo de tratamento em todas as dimensões, **exceto em receber ou não o programa**.
+
+- Na ausência do programa, grupos de tratamento e controle são comparáveis em variáveis observáveis e não observáveis.
+
+
+
+## Aleatorização
+
+- Tem como premissa que uma escolha aleatória bem feita elimina o viés de seleção antes que o programa se inicie e cria grupos estatisticamente idênticos. Por consequência qualquer diferença observável nos indicadores de resultados pode ser atribuída ao programa.
+
+- A forma de obtenção da amostra também vai influenciar na eficácia desse método.
+
+
+## Vantagens de aleatorizar
+
+- Até certo nível, o experimento possui validade externa, ou seja, seus resultados podem ser aproveitados para algum outro programa ou estudo(isso é questionável).
+
+- Observar variáveis que não são normalmente observáveis(Karlan, Zinman 2009).
+
+- Método amplamente utilizado para pesquisas de combate à pobreza.
+
+- Especialmente eficaz para avaliação de políticas pelos motivos citados acima.
+
+
+## Problemas e desafios
+
+Ética
+
+- É preciso cuidado para não ultrapassar barreiras éticas no desenho de uma avaliação de impacto feita por RCT. Isso pode acontecer ao se prejudicar o grupo de controle em busca de um efeito causal. Exemplo real: avaliou-se o efeito do corte da provisão de água nos bairros mais pobres de Nairóbi.
+
+Complexidade
+
+- Avaliações feitas assim são caras, podem durar anos e normalmente são financiadas por instituições que não são transparentes, já que universidades não são capazes de arcar com os custos. 
+
+
+## Problemas e desafios
+
+
+- O que é mais caro? Uma política ruim ou uma boa avaliação?
+
+Externalidade
+
+- O local onde é feito pode alterar o resultado do experimento, portanto a validade externa não é tão confiável assim.
+
+## Recomendações
+
+Cursos da J-PAL
+
+https://www.povertyactionlab.org/page/micromasters
+
+Guia do Banco Mundial
+
+https://openknowledge.worldbank.org/bitstream/handle/10986/25030/9781464808890.pdf
+
+Econometria introdutória
+
+https://economics.ut.ac.ir/documents/3030266/14100645/Jeffrey_M._Wooldridge_Introductory_Econometrics_A_Modern_Approach__2012.pdf
+
+## Fontes
+
+https://monografias.brasilescola.uol.com.br/direito/trajetoria-historica-das-politicas-publicas-no-brasil-instrumentos-de-garantia-do-bem-estar-social.htm#
+
+https://periodicos.ufpe.br/revistas/politicahoje/article/viewFile/3710/3012
+
+http://www.fazenda.rj.gov.br/sefaz/ShowProperty?nodeId=%2FUCMServer%2FWCC198881
+
+https://www.vidaedinheiro.gov.br/wp-content/uploads/2018/09/DEPLAN_Seduc_RS_ARTIGO_THIAGO_Avaliacao_impacto_3Setor.pdf
+
+https://www.ipea.gov.br/portal/images/stories/PDFs/livros/livros/181218_avaliacao_de_politicas_publicas_vol2_guia_expost.pdf
+
+## Fontes
+
+http://www.fazenda.rj.gov.br/sefaz/ShowProperty?nodeId=%2FUCMServer%2FWCC198881
+
+https://periodicos.ufpe.br/revistas/politicahoje/article/viewFile/3710/3012
+
+https://core.ac.uk/download/pdf/268325902.pdf
+
+https://www.cps.fgv.br/cps/pesquisas/Politicas_sociais_alunos/2010/20100512/PDF/BES_Diferen%C3%A7asemDiferen%C3%A7as.pdf
+
+
+## Fontes
+
+https://jcaetanoleite.medium.com/sobre-rcts-e-desenvolvimento-f17ce44686d1
+
+http://unionstats.gsu.edu/9220/Meyer_JBES_1995.pdf
+
+https://onlinelibrary.wiley.com/doi/abs/10.3982/ECTA5781
+
+https://terracoeconomico.com.br/nobel-2019-entre-dilemas-tecnicos-e-eticos-um-premio-a-ousadia/
+
+
+## Fontes
+
+https://www.mdpi.com/2072-4292/11/17/1958
+
+https://www.nber.org/papers/w27569
+
+https://elibrary.worldbank.org/doi/abs/10.1596/978-0-8213-7745-1
+
+
+
+
+
