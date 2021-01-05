@@ -1,0 +1,147 @@
+---
+title: "Eduardo Freire - Trab_03_2020"
+author: "Eduardo Freire"
+date: "08/06/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+covid_19 <- read.csv("covid19_uf_0406.csv", sep = ';')
+```
+
+## Questão 1
+
+1. Crie uma tabela para as UF e Brasil, com três colunas: data da primeira ocorrência, o número de casos atuais e número de mortes atuais.
+
+```{r}
+uf <- covid_19[order(as.Date(covid_19$date)), ]
+uf <- by(uf, uf["state"], head, n=1)
+uf <- Reduce(rbind, uf)
+uf <- uf[c("date", "state")]
+
+uf2 <- covid_19[order(as.Date(covid_19$date)), ]
+
+uf_deaths <- aggregate(uf2$deaths, by = list(uf2$state), FUN = tail, n = 1)
+names(uf_deaths) <- c("state","deaths")  
+uf_confirmed <- aggregate(uf2$confirmed, by = list(uf2$state), FUN = tail, n = 1)
+names(uf_confirmed) <- c("state","confirmed")
+
+uf <- cbind(uf, uf_deaths, uf_confirmed)
+uf <- uf[c('date','state','deaths','confirmed')]
+names(uf) <- c("firstConfirmed","state","deaths","confirmed")
+
+br1 <- aggregate(uf$deaths, by = list(uf$firstConfirmed) , FUN = sum)
+names(br1) <- c("firstConfirmed", "deaths")
+br2 <- aggregate(uf$confirmed, by = list(uf$firstConfirmed), FUN = sum)
+names(br2) <- c("firstConfirmed", "confirmed")
+
+br <- cbind(br1, br2)
+br <- br[c("firstConfirmed", "deaths","confirmed")]
+
+# Estados
+uf
+
+# Brasil
+br
+
+```
+
+## Questão 2
+
+
+2. Faça um rank das UF pelo número de ocorrência e mortes. São duas tabelas, uma para ocorrência mais atuais e a outra para mortes mais atuais.
+
+<br>
+
+a. Quais são a 3 UF com mais ocorrência e as 3 UF com mais mortes?
+
+<br>
+
+**Resposta: RJ, CE, SP, em ambos os casos.**
+
+<br>
+
+b. Como você analisa esta informação? Você acha que este deveria ser um critério de prioridade para definição de uma politica de ajuda?
+
+<br>
+
+**Resposta: Antes de definir uma política, eu compararia o número de infectados com a população total do estado e a capacidade do sistema público de saúde do estado.**
+
+
+```{r}
+
+# estados
+uf_deaths_2 <- covid_19[c("state","deaths")]
+uf_deaths_2 <- uf_deaths_2[order(uf_deaths_2$deaths, decreasing = T),]
+
+uf_confirmed_2 <- covid_19[c("state","confirmed")]
+uf_confirmed_2 <- uf_confirmed_2[order(uf_confirmed_2$confirmed, decreasing = T),]
+```
+
+## Questão 3
+
+3. Como se comportou este rank ao longo dos meses, desde o inicio dos casos no país? ( tabela igual a da questão 2, uma tabela a cada mes)
+
+
+```{r}
+
+uf_rank <- covid_19[c("date","state","deaths","confirmed")]
+uf_rank$date <- as.Date(uf_rank$date, format = "%d/%m/%Y")
+uf_rank$date <- format(uf_rank$date, "%m")
+uf_rank <- uf_rank[order(uf_rank$date, decreasing = T),]
+
+rank1 <- aggregate(uf_rank$deaths, by = list(uf_rank$date) , FUN = sum)
+names(rank1) <- c("date","deaths")
+rank2 <- aggregate(uf_rank$confirmed, by = list(uf_rank$date), FUN = sum)
+names(rank2) <- c("date","confirmed")
+
+
+uf_rank <- cbind(rank1,rank2)
+uf_rank <- uf_rank[c("date","deaths","confirmed")]
+uf_rank
+
+```
+
+
+## Questão 4
+
+4. Faça um gráfico do número de ocorrência e do número de mortes para o país e para o Rio de Janeiro. Estamos no fim da epidemia?
+
+
+**Não, mas tem algo errado com o gráfico do país inteiro. Provavelmente algum estado está com erros na planilha ou problemas ao notificar os dados.**
+
+```{r}
+covid_19$date = as.Date(covid_19$date, format = "%d/%m/%Y")
+rj <- covid_19[covid_19$state == "RJ",]
+
+plot(rj$date, rj$deaths, main="Mortes por CoVid-19 no RJ(2020)", xlab="data", ylab = 'mortes', type = 'l')
+plot(rj$date, rj$confirmed, main="Casos de CoVid-19 no RJ(2020))", xlab="data", ylab = 'casos', type = 'l')
+
+
+br_plot <- covid_19[c("date","state","deaths","confirmed")]
+br_plot$date <- as.Date(br_plot$date, format = "%d/%m/%Y")
+
+br_plot_deaths <- aggregate(br_plot$deaths, by = list(br_plot$date) , FUN = sum)
+names(br_plot_deaths) <- c("date","deaths")
+br_plot_confirmed <- aggregate(br_plot$confirmed, by = list(br_plot$date), FUN = sum)
+names(br_plot_confirmed) <- c("date","confirmed")
+
+
+br_plot <- cbind(br_plot_deaths, br_plot_confirmed)
+br_plot <- br_plot[c("date","deaths","confirmed")]
+
+plot(br_plot$date, br_plot$deaths, main="Mortes por CoVid-19 no Brasil(2020)", xlab="data", ylab = 'mortes', type = 'l')
+plot(br_plot$date, br_plot$confirmed, main="Casos de CoVid-19 no Brasil(2020))", xlab="data", ylab = 'casos', type = 'l')
+
+
+```
+
+
+
+
+

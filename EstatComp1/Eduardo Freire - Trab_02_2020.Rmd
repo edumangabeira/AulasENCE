@@ -1,0 +1,104 @@
+---
+title: "Estatística Computacional I"
+author: "Eduardo Freire"
+subtitle: 'Trabalho 02 - (28/05/2020) '
+output:
+  html_document:
+    df_print: paged
+---
+
+Orientações:
+
+1.  Responda as questões deixando o código R nos respectivos chunks
+2.  Mantenha os nomes de objetos solicitados na questão
+3.  Sempre deixe por último o objeto que responde a pergunta
+
+
+## 1- Leia o arquivo cadastro_geral.csv carregando-o em um objeto com nome df.
+Sabe-se que os registros faltantes são representados pelo código "9999"
+
+```{r}
+df <- read.csv("cadastro_geral.csv", sep=";")
+df[df==9999] <- NA
+```
+
+## 2- Renomeie as colunas com os nomes a seguir, que já  estão na ordem das colunas.
+(cpf , nome, data_nascimento,telefone,cidade, cargo, area, vendas)
+Mantenha o nome df.
+Após renomear as colunas use um comando para mostrar as 3 primeiras linhas de df.
+
+```{r}
+names(df) <- c('cpf' , 'nome', 'data_nascimento','telefone', 'cidade', 'cargo', 'area', 'vendas')
+df[1:3,]
+```
+
+
+
+## 3- A coluna cidade contém a cidade e a UF unidas por um hífen. Separe a cidade da UF, mantendo a coluna cidade só com o nome da cidade e coloque a UF em uma nova coluna de df, com nome uf.
+
+```{r}
+df$uf <- gsub(".*-","", df$cidade)
+df$cidade <- gsub("-.*", "",df$cidade)
+head(df)
+```
+
+
+## 4- Qual o número de cadastrados em cada UF?
+
+```{r}
+uf <- table(df$uf)
+table(df$uf)
+```
+
+## 5- Crie um novo objeto com os cadastrados da maior venda de cada UF
+
+```{r}
+maior_v <- df[order(df$vendas), ]
+maior_v <- by(df, df["uf"], head, n=1)
+maior_v <- Reduce(rbind, maior_v)
+maior_v
+```
+
+
+## 6- Separe o DDD do numero de telefone, criando a colunas: "ddd" e mantendo a coluna "telefone", mas sem o DDD.  
+
+```{r}
+df$ddd <- gsub(").*","", df$telefone)
+df$ddd <- gsub("\\(", "", df$ddd)
+df$telefone <- gsub('.*)','', df$telefone)
+```
+
+## 7- Verifique se a variável telefone esta formatada corretamente (somente números e com 8 dígitos) e faça as correções se necessário.
+
+```{r}
+df$telefone <- gsub("-","", df$telefone)
+df$telefone <- trimws(df$telefone)
+```
+
+## 8- A nova coluna (variável ddd) deve ser incluída em df e deve ficar adjacente e anterior a coluna "telefone".
+
+```{r}
+df <- df[, c(1,2,3,10,4:9)]
+```
+
+## 9- Crie uma nova coluna com a idade. (o nome de nova coluna deve ser "idade")
+
+```{r}
+idade <- difftime(Sys.Date(), as.Date(df$data_nascimento, "%d/%m/%Y"), unit='weeks')
+df$idade <- as.integer(idade / 48)
+```
+
+## 10- Formate a coluna cpf mantendo sempre com 11 digitos e com "." e "-" (ex. ddd.ddd.ddd-dd)
+
+Eu tentei passar os cpfs com menos de 11 números para NA, os considerei inválidos, mas o código não está funcionando.
+
+```{r}
+cpf <- strsplit(as.character(df$cpf), '')
+
+df$cpf[length(cpf) < 11 ] <- NA
+
+cpf <- as.numeric(df$cpf)
+df$cpf <-  lapply(cpf, sub, 
+           pattern = "([0-9]{3})([0-9]{3})([0-9]{3})",replacement= "\\1.\\2.\\3-")
+```
+
