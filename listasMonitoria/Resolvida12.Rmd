@@ -1,0 +1,111 @@
+---
+title: "Resolvida 12"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1 - 
+
+$X \sim N(1021, 214^2)$
+
+$$P\Big(\frac{X - 1021}{214} > \frac{1118 - 1021}{214}\Big) = 1 - P(Z \leq 0.45) = 0.32636$$
+
+2 - 
+
+Utilizando a dica, podemos resolver a questão usando a distribuição normal. 
+
+X:"Comprimento de uma baleia do grupo"
+
+$Y \sim LogNormal(e^{17}, e^{34}(e^4 -1))$
+
+
+$Y = e^X$ e $X \sim N(15, 4)$
+
+
+Padronizando a normal, temos que:
+
+$$P(X > 17) = 1- P(X \leq 17) = 1 - P(Z \leq 1) = 1 - \phi(1) = 0.1586553$$
+
+```{r}
+ 1 - pnorm(17, 15, 2)
+```
+
+
+
+3 -
+
+$X \sim Ga(\frac{n}{2}, \frac{1}{2})$ e $X \sim \chi^2(n)$ são equivalentes.
+
+(a)
+
+$E[X_1] = \frac{6}{2} \times 2 = 6$
+
+$E[X_2] = \frac{17}{2} \times 2 = 17$
+
+
+(b)
+
+$$P(X_2 > 10) = 1 -F(10) = 0.9036103$$
+
+```{r}
+1 - pgamma(10, 17/2, 1/2)
+```
+
+
+4 - 
+
+(a) 
+
+Como X é bijetiva, podemos usar:
+
+$$f_X(x) = f_B(g^{-1}(x)) \times \Big|\frac{dg^{-1}(x)}{dx}\Big|$$
+
+$$g^{-1}(x) = 1-x$$
+
+$$f_X(x) = f_B(1-x) \times \Big|-1\Big|$$
+
+$$f_X(x) = f_B(1-x) $$
+
+$$f_X(x) = \frac{\Gamma(a + b)}{\Gamma(a) \Gamma(b)} (1-x)^{a-1}(1-(1-x))^{b-1} $$
+$$f_X(x) = \frac{\Gamma(a + b)}{\Gamma(a) \Gamma(b)}(1-x)^{a-1}x^{b-1}$$
+
+
+$$X \sim Beta(b, a)$$
+
+
+(b) $Y \sim Unif(0,1)$
+
+
+
+
+5 - X:"Tempo para realizar a tarefa".
+
+$X \sim Gamma(10, \lambda)$.
+
+$E[X] = 10\lambda = 10$.
+
+$\lambda = 1$
+
+
+$$P(X>11) = 1 - F(11) = 0.3405106$$
+
+```{r}
+1 - pgamma(11, 10, 1)
+```
+
+
+
+
+
+
+
+
+

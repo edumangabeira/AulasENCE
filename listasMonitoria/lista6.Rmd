@@ -1,0 +1,150 @@
+---
+title: "Lista 6 - Entrega 13/11"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aviso
+
+**Apenas as cinco primeiras questões da lista serão avaliadas. As cinco últimas são para prática e possuem gabarito, portanto o envio não é necessário.**
+
+
+<br>
+
+1 - Suponha que dos filhos de um casal, a cada 4, um tem o cabelo loiro. Se existem 6 crianças na família, qual é a probabilidade de metade delas terem cabelos loiros? Defina uma variável aleatória e sua distribuição para essa situação.
+
+2 - Seja X uma variável aleatória com a seguinte distribuição:
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c| }
+ \hline
+ $X$ & 0 & 1 & 2\\
+ \hline
+ $f_X(x)$ & 0.25 & 0.5 & 0.25 \\
+ \hline
+\end{tabular}
+\end{center}
+
+(a) Faça o gráfico de sua distribuição de probabilidade(também conhecida como função de probabilidade).
+
+(b) Faça o gráfico de sua distribuição acumulada(também conhecida como função de distribuição).
+
+(c) Obtenha $E[3X + 4]$.
+
+
+3 - Seja X uma variável aleatória tal que $P(X = k) = p(1-p)^{k-1}$, $k = 0, 1, 2, ...$
+
+(a) Obtenha a função geradora de momentos de X. 
+
+(b) Calcule o primeiro momento de X.
+
+Dica: Lembre da série geométrica.
+
+4 - Suponha que um conjunto de 100 itens contenha 6 itens defeituosos e 94 que funcionem normalmente. Se X é o número de itens defeituosos em uma amostra de 10 itens escolhidos aleatoriamente do conjunto, determine:
+
+(a) $P(X=0)$
+
+(b) $P(X>2)$
+
+5 - Considere uma roleta de 38 números com números de 1 a 36, um 0 e um duplo 0. Se João sempre aposta que o resultado seja um dos números de 1 a 12, qual é a probabilidade de que:
+
+(a) João perca suas 5 primeiras apostas?
+
+(b) Sua primeira vitória ocorra em sua quarta aposta? 
+
+6 - Marcela fará um teste de múltipla escolha e a probabilidade dela saber a resposta para uma pergunta é $p$. Havendo $m$ escolhas, caso saiba a resposta, ela responde corretamente com probabilidade 1. Se não sabe responde corretamente com probabilidade $\frac{1}{m}$. 
+
+(a) Qual a probabilidade que ela sabia a resposta dado que a pergunta foi respondida corretamente? 
+
+Calcule o limite desta probabilidade quando:
+
+(b) $m \to \infty$ e $p$ fixo.
+
+(c) $p \to 0$ e $m$ fixo.
+
+7 - Seja X o número de caras obtidas em 4 lançamentos de uma moeda honesta. Desenhe o gráfico da função de distribuição de X(ou distribuição acumulada de X).
+
+
+8 - Três a cada dez estudantes são aprovados em uma disciplina. De uma turma, 16 alunos são selecionados ao acaso. Seja X:"número de alunos aprovados entre os selecionados". Obtenha o valor esperado de X.
+
+9 - Em uma empresa, o número de empregados que são mulheres está para o número de empregados que são homens assim como 2 está para 3. Decide-se extrair uma amostra aleatória de 4 empregados desta empresa, com reposição. Qual a probabilidade de que nesta amostra haja no máximo 2 homens?
+
+10 - Retiram-se 4 cartas, ao acaso, de um barulho de 52 cartas. Registra-se o número de reis na amostra. Exiba um bom modelo probabilístico para este experimento se:
+
+(a) As retiradas são feitas sem reposição.
+
+(b) As retiradas são feitas com reposição.
+
+(c) Determine em que caso, (a) ou (b), é mais provável obter 4 reis.
+
+# Gabarito
+
+6 -
+
+(a) $$\frac {p}{p+\frac{(1-p)}{m}}$$
+
+
+(b) 1
+
+(c) 0
+
+7 - OBS: Eu resolvi no R, mas esperava que vocês desenhassem mesmo. Deixei o código visível para quem tiver curiosidade.
+
+```{r}
+x = (0:4)
+p_x = c(0.0625, 0.25, 0.375, 0.25 , 0.0625)
+plot(x,cumsum(p_x), type="s",ylim = c(0,1), ylab = "F(x)",
+     main = "Função distribuição acumulada de X")
+```
+
+
+
+8 - 4.8
+
+9 - 0.5248
+
+10 - 
+
+(a) X: "número de reis retirados sem reposição"
+
+$X \sim Hgeo(4, 52, 13)$
+
+(b) Y: "número de reis retirados com reposição"
+
+$Y \sim bin(4, \frac{13}{52})$
+
+(c) 
+
+# hipergeométrica
+
+```{r}
+# Argumentos da hipergeométrica no R: 
+# x = número de sucessos obtidos 
+# n = casos onde ocorre sucesso
+# m = casos onde ocorre fracasso
+# k = número de retiradas
+
+dhyper(4, 13, 39, 4)
+```
+
+# binomial 
+
+```{r}
+# Argumentos da binomial no R: 
+# x = número de sucessos obtidos 
+# size = tamanho da amostra
+# prob = probabilidade de sucesso
+dbinom(4, 52, 13/52)
+```
+
+Logo,
+
+$P(X=4) > P(Y= 4)$

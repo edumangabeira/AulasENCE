@@ -1,0 +1,87 @@
+---
+title: "Resolvida 7"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1 - 
+
+Número de pintinhos chocados: $C \sim Bin(n,p)$
+
+Número de pintinhos que sobrevivem: $S \sim Bin(n,pr)$
+
+
+2 - 
+
+$$E[X!] = \sum_{k=0}^{n} k!\frac{e^{-\lambda}\lambda^k}{k!}$$
+
+
+
+
+$$= \sum_{k=0}^{n} e^{-\lambda}\lambda^k = e^{-\lambda}\sum_{k=0}^{n}\lambda^k$$
+
+
+
+Esta série é geométrica com soma $S$ conhecida. $S= \frac{1}{1-\lambda}$
+
+
+$$E[X!] = \frac{e^{-\lambda}}{1 - \lambda}$$
+
+3 - https://math.stackexchange.com/questions/1186075/poisson-processes-and-ballistic-missiles 
+
+Uma vez que existem 500 mísseis antiaéreos, cada um com uma probabilidade de $\frac{0.1}{10} = 0.01$ de atingir um determinado míssil que se aproxima, o número esperado de acertos em cada míssil é 5.
+
+Assim, a aproximação de Poisson para obter nenhum acerto em um determinado míssil que se aproxima é $e^{-5}$. 
+
+X:"acertos em um míssil".
+
+$X \sim Poisson(5)$
+
+$P(X=0) = \frac{e^{-5}5^0}{0!} = e^{-5}$ 
+
+
+Portanto, a probabilidade de obter pelo menos um acerto em cada míssil em particular é $(1-e^{-5})$ e a probabilidade de acertar todos os 10 é:
+
+$$ (1-e^{-5})^{10} = 0.9346272 $$
+
+```{r}
+(1 - dpois(0, 5))^10
+```
+
+
+
+
+4 - 
+
+X ~ bin(4, 0.5)
+
+```{r}
+x = (0:4)
+p_x = c(dbinom(0, 4, 0.5), dbinom(1, 4, 0.5), dbinom(2, 4, 0.5), dbinom(3, 4, 0.5), dbinom(4, 4, 0.5))
+plot(x,cumsum(p_x), type="s",ylim = c(0,1), ylab = "F(x)",
+     main = "Função distribuição acumulada de X")
+```
+
+
+5 - 
+
+A:"A droga é benéfica"
+
+X: "Número de resfriados
+
+$$P(A|X=2) = \frac{P(X=2|A)P(A)}{P(X=2|A)P(A) + P(X=2|A^c)P(A^c)}$$
+$$ = \frac{P(X=2|A)\times\frac{3}{4}}{P(X=2|A)\times\frac{3}{4} + P(X=2|A^c)\times\frac{1}{4}}$$
+$$ = \frac{e^{-3}\frac{3^2}{2}\times\frac{3}{4}}{e^{-3}\frac{3^2}{2}\times\frac{3}{4} + e^{-5}\frac{5^2}{2}\times\frac{1}{4}} = 0.8886437$$
+
+
+
+
+

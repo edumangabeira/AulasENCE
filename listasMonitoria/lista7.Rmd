@@ -1,0 +1,127 @@
+---
+title: "Lista 7 - Entrega 03/12"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aviso
+
+**Apenas as cinco primeiras questões da lista serão avaliadas. As cinco últimas são para prática e possuem gabarito, portanto o envio não é necessário.**
+
+
+<br>
+
+1 - Existem $n$ ovos, cada um choca um pintinho com probabilidade p (independentemente). Cada um dos pintinhos sobrevive com probabilidade $r$, independentemente. Qual é a distribuição do número de pintinhos que são chocados? Qual é a distribuição do número de pintinhos que sobrevivem?
+
+2 - Para $X \sim Poisson(λ)$, encontre $E(X!)$ (a esperança do fatorial de X), se for finito.
+
+Dica: Lembre da série geométrica.
+
+3 -  Em resposta ao ataque de 10 mísseis, 500 mísseis antiaéreos são lançados. Os alvos dos mísseis antiaéreos são independentes, e cada míssil antiaéreo pode ter, com igual probabilidade, qualquer um dos 10 mísseis como alvo. Se cada míssil antiaéreo atinge o seu alvo independentemente com probabilidade 0.1, use o paradigma de Poisson para obter um valor aproximado para a probabilidade de que todos os mísseis sejam atingidos.
+
+4 - Seja X o número de caras obtidas em 4 lançamentos de uma moeda honesta. Desenhe o gráfico da função de distribuição acumulada de X.
+
+5 - O número de vezes em que uma pessoa contrai um resfriado em um dado ano é uma variável aleatória de Poisson com parâmetro $\lambda = 5$. Suponha que a propaganda de uma nova droga (baseada em grandes quantidades de vitamina C) diga que essa droga reduz os parâmetros da distribuição de Poisson para $\lambda = 3$ em 75% da população. Nos 25% restantes, a droga não tem um efeito apreciável nos resfriados. Se um indivíduo experimentar a droga por um ano e tiver resfriados naquele período, qual é a probabilidade de que a droga tenha trazido algum benefício para ele ou ela? 
+
+6 - Se a probabilidade de um certo gado sofrer uma reação nociva resultante da
+injeção de um determinado soro é 0.001, determine a probabilidade de entre 2000 animais:
+
+(a) Exatamente 3 sofrerem aquela reação.
+
+(b) Mais do que 2 sofrerem aquela reação.
+
+7 - Um crime é cometido por um dos dois suspeitos, A e B. Inicialmente, há evidências iguais contra ambos. Em uma investigação mais aprofundada na cena do crime, encontra-se que o culpado tinha um tipo de sangue encontrado em 10% da população. O sangue do suspeito A coincide com este tipo de sangue, enquanto o tipo de sangue do Suspeito B é desconhecido.
+
+(a) Dada essa nova informação, qual é a probabilidade de que A seja o culpado?
+
+(b) Dada essa nova informação, qual é a probabilidade de que o tipo de sangue do suspeito B
+coincida com o encontrado na cena do crime?
+
+8 - Se X é uma variável aleatória geométrica, mostre analiticamente que:
+
+$$P(X = n + k|X=n) = P(X=k)$$
+
+
+Usando a interpretação da variável aleatória geométrica, forneça um argumento verbal para o porquê da equação anterior ser verdade.
+
+
+9 - O número esperado de erros tipográficos em uma página de certa revista é igual a 0.2. Qual é a probabilidade de que a próxima página que você leia contenha:
+
+(a) nenhum erro?
+
+(b) 2 ou mais erros tipográficos?
+
+Explique o seu raciocínio! 
+
+
+10 - Você tem 1000 reais, e certa mercadoria é vendida atualmente por 2 reais o quilo. Suponha que uma semana depois a mercadoria passe a ser vendida por 1 real ou 4 reais o quilo, com essas duas possibilidades sendo igualmente prováveis.
+
+(a) Se o seu objetivo é maximizar a quantidade esperada de dinheiro que você possuirá no final da semana, que estratégia você deve empregar?
+
+(b) Se o seu objetivo é maximizar a quantidade esperada de mercadoria que você possuirá no final da semana, que estratégia você deve empregar? 
+
+
+# Gabarito
+
+6 -
+
+(a) 0.1805
+
+(b) 0.3233
+
+7 -
+
+(a) $\frac{10}{11}$
+
+(b) $\frac{2}{11}$
+
+8 - **Propriedade da perda de memória**
+
+
+$$ P(X = n + k|X=n) = \frac{P(X=n + k)}{P(X>n)}$$
+
+$$ = \frac{p(1-p)^{n+k-1}}{(1-p)^n}$$
+
+
+
+$$= p(1-p)^{k-1}$$
+
+
+
+
+Se todas as **n** primeiras tentativas falharem, então é como se estivéssemos começando de novo naquele momento.
+
+9 - 
+
+Uma vez que cada letra tem uma pequena probabilidade de ser um erro de digitação, o número de erros tem aproximadamente uma distribuição de poisson.
+
+Lembre, sempre que **p** for pequeno e **n** grande é possível aproximar a binomial pela poisson.
+
+(a) $e^{-2}$
+
+
+(b) $1 - e^{-2} - 0.2e^{-2} = 1 - 1.2e^{-2}$
+
+
+
+10 - 
+
+(a) Use todo o seu dinheiro para comprar 500 quilos da mercadoria e vender depois de uma semana.
+A quantia esperada de dinheiro que você receberá é:
+
+$$E[dinheiro] = 0.5\times 500 + 0.5 \times 2000 = 1250$$
+
+
+
+(b) Não compre imediatamente, mas use seu dinheiro para comprar depois de uma semana. Logo:
+
+$$E[quilos] = 0.5\times 1000 + 0.5 \times 250 = 625$$

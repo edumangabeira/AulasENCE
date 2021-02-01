@@ -1,0 +1,44 @@
+---
+title: "Lista 2 - Entrega 14/10"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Explique bem seu raciocínio em todas as questões e tente ter clareza. Bons estudos!
+
+
+1 - Mostre que se $A \subset B$ então $P(A) \leq P(B)$.
+
+
+2 - Mostre que para eventos quaisquer $A_1$, $A_2$, ...
+
+  $P(\bigcup\limits_{i=1}^{\infty} A_i) \leq \sum\limits_{i=1}^{\infty} P(A_i)$
+
+  Dica: $\bigcup\limits_{i=1}^{\infty} A_i = A_1 \cup (A_1^{c}\cap A_2) \cup (A_1^{c}\cap A_2^{c} \cap A_3) \cup  ...$
+
+3 - Três candidatos, Álvaro, Bené e Cidinha estão concorrendo às eleições de um município brasileiro e só um deles pode ser eleito. Álvaro e Cidinha podem ser eleitos com igual probabilidade, enquanto Bené ganha apenas com metade da probabilidade de Álvaro. Porém, quando a população sabe que um político é corrupto, a probabilidade de eleger esse candidato cai pela metade. Também é sabido que a probabilidade de um político ser corrupto nesse município é de 0,42. Obtenha as probabilidades de que:
+
+a) Dado que Álvaro é corrupto e Cidinha *não* é corrupta, Álvaro vença ou Cidinha vença.
+
+b) Bené ser corrupto dado que ele venceu.
+
+
+4 - Um filtro de spam é projetado com base em frases que ocorrem normalmente em spam's. Suponha que 80% dos e-mail's são spam's. Em 10% dos e-mails de spam, a frase "dinheiro grátis" é usada, enquanto esta frase é usada apenas em 1% dos e-mails não-spam's. Um novo e-mail acabou de chegar que menciona "dinheiro grátis". Qual é a probabilidade de que ele seja spam?
+
+
+5 - Você vai jogar 2 jogos de xadrez com um oponente contra quem nunca jogou antes. É igualmente provável que seu oponente seja iniciante, intermediário ou mestre. Dependendo disso, suas chances de ganhar um jogo individual é 90%, 50% ou 30%, respectivamente.
+
+a) Qual é a probabilidade de você ganhar o primeiro jogo?
+
+b) Você ganhou o primeiro jogo. Dada essa informação, qual é a probabilidade de você
+também vencer o segundo jogo (suponha que, dado o nível de habilidade do seu adversário, os
+resultados dos jogos são independentes)?
+
