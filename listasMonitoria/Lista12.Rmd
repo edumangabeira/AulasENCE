@@ -1,0 +1,96 @@
+---
+title: "Lista 12 - Entrega 29/01"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aviso
+
+**Apenas as cinco primeiras questões da lista serão avaliadas. As cinco últimas são para prática e possuem gabarito, portanto o envio não é necessário.**
+
+1 - O índice pluviométrico anual em Cleveland, Ohio, é aproximadamente uma variável aleatória normal com média 1021mm e desvio padrão de 214 mm. Qual é a probabilidade de que o índice pluviométrico do próximo ano exceda 1118 mm? 
+
+2 - A Baleia de bryde é uma espécie pouco conhecida, porém uma das maiores criaturas do planeta Terra. Ela costuma nadar em grandes grupos e não transitar grandes distâncias. Sabe-se que o comprimento(em metros) das baleias de um desses grupos é dado por uma variável aleatória com distribuição Normal. Um biólogo registrou por acidente os parâmetros $\mu = e^{17}$ e $\sigma^2 = e^{34}(e^4 -1)$ pensando que a variável aleatória tinha distribuição Log-Normal. Encontre a probabilidade de uma baleia do grupo possuir mais que 17 metros de comprimento.
+
+Dica: Se $X\sim N(\mu_x, \sigma_x^2)$ e $Y = e^X ~ \sim LogNormal(\mu_y, \sigma^2_y)$, então:
+
+$Y \sim LogNormal(e^{\mu_x +0.5\sigma_x^2},e^{2\mu_x+\sigma_x^2}(e^{\sigma_x^2} -1))$
+
+3 - Duas lâmpadas possuem tempos de vida(em anos) dados por variáveis aleatórias com distribuição Qui-quadrado. A primeira, fluorescente, tem 6 graus de liberdade como parâmetro. A segunda, de LED, possui 17 graus de liberdade. Determine:
+
+(a) Os tempo de vida esperado de cada lâmpada.
+
+(b) A probabilidade da lâmpada de LED durar mais que 10 anos.
+
+4 - A distribuição Beta é conhecida por possuir grande versatilidade e é apropriada para modelar proporções, por seu domínio estar no intervalo $(0,1)$. Também se sabe que a distribuição Uniforme pode ser considerada como um caso particular da Beta. Com essas informações, obtenha:
+
+(a) A distribuição de $X$, tal que $X = 1 - B$ e $B \sim Beta(a,b)$. Dica: Usar o método do Jacobiano.
+
+(b) A distribuição de $Y$ tal que  $B \sim Beta(1,1)$. 
+
+
+5 - O tempo que o funcionário de uma empresa leva para realizar uma tarefa em seu computador possui distribuição Gama com parâmetros 10 e $\lambda$. O funcionário passa em média 10 minutos fazendo sua tarefa. Encontre a probabilidade do tempo de utilização do computador superar 11 minutos.
+
+\newpage
+
+6 - A Acme Corporation fabrica detonadores controlados por um dispositivo remoto. O CEO afirma que a bateria de um dispositivo comum da Acme dura 300 dias. Um pesquisador seleciona aleatoriamente 15 baterias para teste. As baterias da amostra duram em média 290 dias, com desvio padrão de 50 dias. Se a afirmação do CEO for verdadeira, qual é a probabilidade de que 15 baterias selecionadas aleatoriamente tenham uma vida média de no máximo 290 dias? Use a T de Student e a função ```pt()``` do software R para calcular essa probabilidade.
+
+7 - Seja $U\sim Unif(0,1)$ e
+
+$$X = log\Big(\frac{U}{1-U}\Big)$$
+Então X tem distribuição logística.
+
+(a) Escreva(mas não calcule) a integral que representa $E[X^2]$.
+
+(b) Encontre E[X] sem usar cálculo.
+
+8 - O Futebol é um esporte que exige muito fisicamente de um atleta, inclusive dos goleiros, que precisam de reflexos e tempo de reação aguçados. Suponha que o tempo de reação em segundos de um goleiro possa ser modelado por uma distribuição Log-Normal de parâmetros $-0.35$ e $0.2$. Encontre a probabilidade de que o tempo de reação do goleiro seja menor que $0.6$ segundos.
+
+9 - Mostre que se $X \sim Beta(1,1)$ então $Y = ln X \sim Gama(1, 1)$.
+
+
+10 - Mostre que a densidade de uma variável aleatória $X \sim Gama(\alpha, \lambda)$ é uma densidade válida.
+
+
+# Gabarito
+
+6 - $0.2257313$
+
+
+
+7 -
+(a) $E[X^2] = \int_{0}^{1} \Big(log\Big(\frac{u}{1-u}\Big)\Big)^2du$
+
+(b) $E[X] = 0$
+
+
+8 - $P(Z < -0.8) = 0.2119$.
+
+
+
+\newpage
+
+# Tabela da normal padrão
+
+
+Exemplo:$\phi(1.13)$ OU \ $P(Z \leq 1.13)$
+
+
+![](tabelanormal.png)
+
+
+
+
+
+
+
+

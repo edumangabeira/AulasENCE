@@ -1,0 +1,86 @@
+---
+title: "Lista 8 - Entrega 11/12"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aviso
+
+**Apenas as cinco primeiras questões da lista serão avaliadas. As cinco últimas são para prática e possuem gabarito, portanto o envio não é necessário.**
+
+
+<br>
+
+1 - Para uma variável aleatória hipergeométrica, determine:
+
+$$\frac{P(X=k+1)}{P(X=k)}$$
+
+2 - Certa agência de digitação emprega dois digitadores. O número médio de erros por artigo é de 3 quando este é digitado pelo primeiro digitador e 4,2 quando digitado pelo segundo. Se o seu artigo tem a mesma probabilidade de ser digitado por qualquer um dos digitadores, obtenha uma aproximação para a probabilidade de que ele não tenha erros.
+
+
+3 - Um dado honesto é lançado 4 vezes. Seja X o número de tentativas até obter uma face par, determine o gráfico da função de probabilidade da variável aleatória X.
+
+
+4 - Suponha que 10% da população seja canhota. São escolhidas 3 pessoas ao
+acaso. Qual é a probabilidade de ao menos uma das pessoas ser canhota?
+
+5 - O gerente de uma indústria estava preocupado com a queda de qualidade do seu processo e resolveu investigar a causa. Ele tinha um palpite de que a causa da queda de qualidade era uma injetora plástica mal regulada que estaria produzindo mais defeitos do que o esperado. Considere X o número de defeitos apresentados no processo dessa máquina durante um período de tempo. Suponha que X tenha na realidade uma distribuição de Poisson com $\lambda$ = 4.5, de forma que, na média, em cada dia de trabalho a máquina faça 4.5 peças com defeito. Por fim, considere que para esse gerente e esse processo são aceitáveis um máximo de 5 defeitos diários. Calcule então a probabilidade de em um dia ocorrerem exatamente 5 defeitos e a probabilidade de existirem no máximo 5 defeitos por dia. Considere que não existem “meios defeitos"; uma peça é defeituosa ou não.
+
+
+6 - Uma sequência de n experimentos independentes é realizada. Cada experimento é um sucesso com probabilidade p e falha com probabilidade q = 1−p. Mostre que condicional ao número de sucessos, todas as possibilidades válidas para a lista de resultados do experimento são igualmente prováveis.
+ 
+
+7 - O número de peixes em um determinado lago é uma variável aleatória Pois($\lambda$). Preocupado de que pode não haver peixe, um estatístico adiciona um peixe ao lago. Seja Y o número resultante de peixes (então Y é 1 mais uma variável aleatória Pois($\lambda$)).
+
+a) Encontre $E(Y^2)$.
+
+b) Encontre $E(\frac{1}{Y})$.
+
+
+8 - Seja X $\sim$ Geom(p) e seja t uma constante. Encontre $E(e^{tX})$, em função de t (isto é, encontre a função geradora de momentos).
+
+
+9 - Durantes as eleições municipais, um candidato a prefeito é escolhido por um eleitor com probabilidade 0.82. Porém, caso o candidato se envolva em algum crime e o fato se torne de conhecimento público, a probabilidade de ser eleito cai pela metade. Sabendo que o município tem 1000 habitantes e o candidato Jorginho se envolveu num esquema de corrupção, qual a probabilidade de 400 habitantes votarem em Jorginho?
+
+
+10 - Há três autoestradas em um país. O número de acidentes que ocorrem diariamente nessas autoestradas é uma variável aleatória de Poisson com respectivos parâmetros 0.3, 0.5 e 0.7. Determine o número esperado de acidentes que vão acontecer hoje em qualquer uma dessas autoestradas.
+
+
+# Gabarito
+
+6 - 
+
+$$\frac{1}{{n\choose k}}$$
+ 
+
+
+7 - 
+
+(a) $E[Y^2] = λ^2 + 3λ + 1$
+
+(b) $E[\frac{1}{Y}] = \frac{1}{\lambda}(1 − e^{−λ})$
+
+
+
+
+8 - 
+
+$$ \frac{p}{1 − (1-p)e^t}$$
+
+
+9 - 0.02092631
+
+
+
+10 -  1.5
+
+
