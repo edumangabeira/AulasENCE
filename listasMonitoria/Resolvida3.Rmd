@@ -1,0 +1,94 @@
+---
+title: "Lista 3 - Entrega 22/10"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+1 - Como $p$ representa o sucesso(obter cara), $1-p$ representa o fracasso(obter coroa).
+
+Defina $A_i$: "obter uma cara no i-ésimo lançamento". Logo, $P(A_i) = p$
+
+Seja $B$: "número de caras obtidas em $n$ lançamentos".
+
+Como queremos a probabilidade após $n$ lançamentos independentes:
+
+$P(A_1) \cap P(A_2) \cap ... P(A_n) = P(A_1) \times P(A_2) \times ... P(A_n)  = P(A_i)^n$
+
+Logo,
+
+$P(B \geq 1) = 1 - P(B < 1) = 1 - P(B = 0)$
+
+E como sabemos que $P(B = 0)$ quer dizer *nenhum* sucesso, ou seja, $P(A_i^c)^n$ segue que:
+
+$$ 1 - (1-p)^n \geq \frac{1}{2} $$
+
+
+$$ n \geq - \frac{log(2)}{log(1-p)} $$
+
+
+
+2 - Seja C:"o tumor é cancerígeno" e N:"O médico não realiza a ligação" Então:
+
+
+a) 
+$\beta = P(C|N) = \frac{P(C \cap N)}{P(N)}$ \ $\alpha = P(C)$
+
+Sabemos que, 
+
+$P(N|C) = 1$
+
+e também que 
+
+$P(N|C^c) = \frac{1}{2}$
+
+Então podemos escrever:
+
+$$P(C|N) = \frac{P(N|C)P(C)}{P(N|C)P(C) + P(N|C^c)P(C^c) } $$
+
+$$\frac{\alpha}{\alpha+\frac{1}{2}(1-\alpha)}$$
+
+$$\beta = \frac{2\alpha}{1 + \alpha} \geq \alpha$$
+
+Assim, $\beta > \alpha$ sempre que $0 < \alpha < 1$.
+
+
+3 - Basta abrir o termo $P(B^c|A^c)$
+
+$$P(B^c|A^c) = \frac{P(B^c \cap A^c)}{P(A^c)} $$ 
+
+
+$$ = \frac{P(A^c | B^c) P(B^C)}{P(A^c)} $$
+
+
+$$ =  \frac{P(A^c | B^c) P(B^c)}{P(A^c | B^c)P(B^c) + P(A^C|B)P(B)} $$
+
+
+$$ \frac{P(B^c)}{P(B^c)} = 1$$
+
+4 -
+
+a) Escolha uma pessoa aleatoriamente.
+
+Seja S: "sofre acidente" B: "risco baixo" M: "risco médio E:"risco elevado"
+
+$$P(s) = P(S|B)P(B) + P(S|M)P(M) + P(S|E)P(E) $$
+
+$$P(S) = 0.05\times0.2 + 0.15 \times 0.5 + 0.3 \times 0.3 = 0.175$$
+
+b) 
+$$ P(B|S^c) + P(M|S^c) $$
+
+
+$$ = \frac{P(S^c|B)P(B)}{P(S^c)} + \frac{P(S^c|M)P(M)}{P(S^c)} $$
+
+$$= \frac{0.95 \times 0.2}{0.825} + \frac{0.85 \times 0.5}{0.825} = 0.74545$$
+

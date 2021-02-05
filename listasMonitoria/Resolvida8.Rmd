@@ -1,0 +1,74 @@
+---
+title: "Resolvida 8"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1 - 
+
+$$ \frac{P(X=k+1)}{P(X=k)} = \frac{{Np\choose{k+1}} {N-np\choose{n-k-1}}}{{Np\choose{k}}{N-Np\choose{n-k}}}$$
+
+$$= \frac{(Np-k)(n-k)}{(k+1)(N-Np-N+K+1)}$$
+
+
+
+2 - 
+
+X: "número de erros pelo digitador 1."
+
+Y: "número de erros pelo digitador 2."
+
+X ~ Poi(3)
+
+Y ~ Poi(4,2)
+
+
+$$\frac{1}{2}P(X=0) + \frac{1}{2}P(Y=0) = \frac{1}{2}\Big[e^{-3}+e^{-4.2}  \Big] $$
+
+3 -
+
+```{r}
+x = (1:4)
+p_x = c(dgeom(1, 1/2), dgeom(2, 1/2),dgeom(3, 1/2), dgeom(4, 1/2))
+plot(x,p_x, type="h", ylim = c(0,0.3), ylab = "p(x)",
+     main = "Função distribuição de probabilidade de X")
+points(x,p_x,pch=16,cex=2,col="dark red")
+```
+
+
+
+4 - 
+
+X ~ Bin(3, 0.1)
+
+$P(X \geq 1) = 1 - P(X=0) = 1 - 0.729 = 0.271$
+
+```{r}
+1 - dbinom(0, 3, 0.1)
+```
+
+
+
+5 - X ~ Poi(4.5)
+
+$P(X=5) = \frac{e^{-4.5}\times4.5^5}{5!} = 0.1708269$
+
+```{r}
+dpois(5, 4.5)
+```
+
+$P(X\leq5) = P(X=0) + P(X=1) + ... +P(X=5) = 0.7029304$
+
+```{r}
+ppois(5, 4.5)
+```
+
+

@@ -1,0 +1,99 @@
+---
+title: "Resolvida 9"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+1 -
+
+$X \sim Geom(0.2)$
+
+$P(X=10) = 0.8^{10-1}\times 0.2 = 0.02684$
+
+```{r}
+dgeom(10-1, 0.2)
+```
+
+
+2 -
+
+$$X \sim Hgeo(50, 30, 5)$$
+
+$$P(X=4) = 0.258689 \approx 0.2587$$
+
+```{r}
+dhyper(4, 30, 50-30, 5)
+```
+
+3 - 
+
+$$\{a<X\leq b\} = \{(X \leq b) \cap(X \leq a)^C \}$$
+
+
+Como $P(A\cap B^c) = P(A) - P(A \cap B)$
+
+$$P(a<X\leq b) = P(X \leq b) - P((X \leq b) \cap (X \leq a)) $$
+$$P(a<X\leq b) = P(X \leq b) - P(X \leq a)$$
+
+
+Note ainda que: 
+
+
+$$P(a<X\leq b) = F(b) - F(a)$$
+
+
+
+4 -
+
+$$F(4) - F(2) = 1 - \frac{3}{4} = \frac{1}{4}$$
+
+
+
+5 -
+
+(a) 
+
+$$\int_{0}^{1} K[2e^{-x}+4x] \,dx = 1$$
+
+
+$$\iff K\Big[\int_{0}^{1} 2e^{-x} dx +\int_{0}^{1} 4x \,dx\Big] = 1$$
+
+$$\iff K\Big[2(1-e^{-1}) +2\Big] = 1$$
+
+$$K = \frac{1}{-2e^{-1} + 4}$$
+
+
+
+(b) 
+
+$$\int_{0}^{1}x^2 K[2e^{-x}+4x] \,dx =$$ 
+
+
+$$K\Big[\int_{0}^{1} 2x^2e^{-x} dx +\int_{0}^{1} 4x^3 \,dx\Big] =$$
+
+
+$$K\Big[\int_{0}^{1} 2x^2e^{-x} dx + 1\Big] =$$
+
+
+$$K\Big[e^{-1}(4e-10) + 1\Big] =$$
+
+
+$$\frac{1}{-2e^{-1} + 4}\Big[e^{-1}(4e-10) + 1\Big] = \frac{e^{-1}(4e-10) + 1}{-2e^{-1} + 4} \approx 0.4047514$$
+
+(c)
+
+
+
+$$\int_{0}^{\frac{1}{2}} K[2e^{-x}+4x] \,dx = \frac{K(5e^{\frac{1}{2}}- 4)}{2e^{\frac{1}{2}}}$$
+
+
+

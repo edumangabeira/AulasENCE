@@ -1,0 +1,34 @@
+---
+title: "Lista 3 - Entrega 22/10"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+1 - Em cada uma das n jogadas independentes de uma moeda, obtém-se cara com uma probabilidade $p$. Quão grande precisa ser $n$ para que a probabilidade de se obter pelo menos uma cara seja de pelo menos $\frac{1}{2}$? 
+
+<br>
+
+2 - Dona Aquina acabou de fazer uma biópsia para verificar a existência de um tumor cancerígeno. Evitando estragar um evento de família no final de semana, ela não quer ouvir nenhuma má notícia nos próximos dias. Mas se ela disser ao médico para telefonar-lhe somente se as notícias forem boas, então, se o médico não ligar, Dona Aquina pode concluir que as notícias não são boas. Assim, sendo uma estudante de probabilidade, Dona Aquina instrui o médico a jogar uma moeda, se der cara, o doutor deverá telefonar-lhe se as novidades forem boas e não telefonar-lhe se elas forem más. Se a moeda der coroa, o médico não deverá telefonar-lhe. Dessa maneira, mesmo se o médico não telefonar-lhe, as notícias não serão necessariamente más. Seja $\alpha$ a probabilidade de que o tumor seja cancerígeno e $\beta$ a probabilidade condicional de que o tumor seja cancerígeno dado que o médico não faça o telefonema. 
+
+Qual probabilidade é maior, $\alpha$ ou $\beta$? Mostre a desigualdade determinando $\beta$ em termos de $\alpha$.
+
+<br>
+
+3 - Mostre que, se $P(A|B) = 1$, então $P(B^c|A^c) = 1$ 
+
+
+4 - Suponha que uma companhia de seguros classifique as pessoas em uma de três classes: risco baixo, risco médio e risco elevado. Os registros da companhia indicam que as probabilidades de que pessoas com riscos baixo, médio e elevado estejam envolvidas em acidentes ao longo do período de um ano são de 0.05, 0.15 e 0.30. Se 20% da população são classificados como de risco baixo, 50% de risco médio e 30% de risco elevado, responda: 
+
+a) Que proporção de pessoas sofre acidentes ao longo de um ano?
+
+b) Se o segurado A não sofreu acidentes em 1997, qual é a probabilidade de que ele ou ela seja uma pessoa de risco baixo ou médio? 
+

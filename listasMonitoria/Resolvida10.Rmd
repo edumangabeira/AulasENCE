@@ -1,0 +1,145 @@
+---
+title: "Resolvida 10"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+1 -
+
+$$\int_{0}^{3} c[x^2+7x] \,dx = 1$$
+
+$$c(40.5) = 1$$
+
+$$c = \frac{1}{40.5} \approx 0.0247$$
+
+
+
+2 - Existem duas formas de resolver.
+
+2.1 Para a prova, recomendo padronizar e usar tabela da normal padrão.
+
+Lembrando que  $Z = \frac{X - \mu}{\sigma}$ e $Z\sim N(0,1)$ se $X\sim N(\mu,\sigma^2)$.
+
+2.2 Usando diretamente o R. Pense no gráfico da densidade da normal: no item (a) queremos a área abaixo da curva que está localizada na cauda direita, após 1.90. Para obtê-la basta calcular a acumulada até o ponto 1.90 e fazer o seu complementar. Apenas lembre que a questão nos deu a variância, e o parâmetro que a normal recebe no R é o desvio padrão!
+
+
+(a)
+
+$$P(Y > 1.90) = P\Big(Z > \frac{1.90 - 1.72}{0.12}\Big) = P(Z>1.5)  $$
+
+$$P(Z>1.5) = 1 -P(Z\leq 1.5) = 1 - \phi(1.5)$$
+
+Olhando a tabela da acumulada da normal padrão, vemos que $\phi(1.5) = 0.9331928$
+
+
+Logo, $$P(Y > 1.90) = 1 - \phi(1.5) = 0.0668072 \approx 0.067$$
+
+
+```{r}
+1 - pnorm(1.90, 1.72, 0.12)
+```
+
+(b)
+
+
+$$P(Y < 1.60) = \phi\Big(\frac{1.6 -1.72}{0.12}\Big) = \phi(-1)$$
+
+Observe o gráfico da normal padrão e sua simetria. Conclua que:
+
+$$ \phi(-1) = 1 - \phi(1) = 1 - 0.8413447 = 0.1586553 \approx 0.16$$
+
+
+```{r}
+pnorm(1.60, 1.72, 0.12)
+```
+
+
+(c)
+
+
+$$ P(1.60 < Y < 1.72) = \phi\Big(\frac{1.72 -1.72}{0.12}\Big) - \phi\Big(\frac{1.63 -1.72}{0.12}\Big) $$
+
+
+$$ \phi(0) - \phi (-0.75) =  0.5 - \phi(-0.75) = 0.5 - (1-\phi(0.75)) \approx 0.27  $$
+```{r}
+pnorm(1.72, 1.72, 0.12) - pnorm(1.63, 1.72, 0.12)
+```
+
+3 - 
+
+(a) 
+
+$$Var[Z] = E[Z^2] - E[Z]^2$$
+$$1 = E[Z^2] - 0^2$$
+
+
+$$E[Z^2] = 1$$
+
+(b)
+
+$$P(X\leq x) = P(Z^2\leq x) = P(-\sqrt{x}\leq Z \leq \sqrt{x})$$
+
+$$ \frac{1}{2\pi}\int^{\sqrt{x}}_{-\sqrt{x}} e^{\frac{-x^2}{2}} dz$$
+
+4 -
+
+$$X \sim N(np, np(1-p))$$
+
+
+$$X \sim N(20, 10)$$
+
+
+
+
+Fazendo a correção de continuidade, temos:
+
+$$P(X = 20) = P(19.5 \leq X < 20.5)$$
+
+Agora basta padronizar X.
+
+$$P(X = 20) = P\Big(\frac{19.5 - 20}{\sqrt{10}}\leq Z< \frac{20.5 - 20}{\sqrt{10}}\Big)$$
+
+$$ = \phi(0.16) - \phi(-0.16) \approx 0.1272$$
+
+Vamos comparar com o resultado exato:
+
+
+$X \sim bin(40, 0.5)$.
+
+
+
+$$P(X=20) = {40\choose20}\Big(\frac{1}{2}\Big)^{40} \approx 0.1254$$
+
+5 -
+
+Vamos fazer a aproximação pela normal considerando $p = \frac{1}{2}$(moeda honesta).
+
+
+$$Y \sim N\Big(10000\times \frac{1}{2}, 10000\times \frac{1}{2}\times\Big(1 -\frac{1}{2}\Big)\Big)$$
+
+$$Y \sim N(5000, 2500)$$
+
+Vamos calcular a probabilidade de tirarmos mais que 5800 caras. Para isso faremos a aproximação pela normal e a devida correção de continuidade.
+
+Se essa probabilidade for significante podemos considerar a moeda viesada.
+
+X:"Número de caras"
+
+$$P(X > 5800) = P(Z > 5799.5) = P\Big(Z> \frac{799.5}{\sqrt{2500}}\Big)$$ 
+
+
+$$P(X > 5800) = P(Z > 15.99)$$
+
+
+
+Esse valor($15.99$) está muito à direita na cauda da curva, a probabilidade do número de caras cair nesse intervalo($>15.99$) é insignificante, portanto é razoável supor que a moeda não é honesta.
+

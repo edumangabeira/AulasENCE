@@ -1,0 +1,108 @@
+---
+title: "Resolvida 11"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+1 - X: "volume anual de chuvas."
+
+$P(X > 50) = P(Z > \frac{50-40}{4}) = 1 - 0.9938$
+
+
+Logo, $P(X < 50)^{10} = 0.9938^{10}$
+
+K: "Quantidade de anos em que chove mais que 50 mm."
+
+$P(K>10) = 1 - P(K <10) = 1 - 0.9938^{10} = 0.06029849$
+
+2 -
+
+
+(a) X: "Número de quedas de meteoritos entre março e abril."
+
+$X \sim Poisson\Big((\frac{6100}{365})\times 61\Big)$
+
+$E[X] = 1019.452$, ou seja, espera-se que caiam 1019 meteoritos na Terra entre esses dois meses.
+
+
+(b) V: "Tempo até a queda do próximo meteorito."
+
+
+$V\sim Exp\Big(\frac{6100}{365}\Big)$
+
+$P(V \leq 30) = 0.2940236$
+
+```{r}
+pexp(1/48, 6100/365)
+```
+
+
+(c) W: "Dia em que o meteorito 500 atinge a terra.", $j =1,2,..$.
+
+$W \sim Gama\Big(500, (\frac{6100}{365})\Big)$
+
+$P(W > 31) = 0.2078293$
+
+
+```{r}
+1 - pgamma(31, 500, 6100/365)
+```
+
+
+
+3 -
+
+$P(X > k) = 0.05$
+
+$k = 21.026$
+
+
+4 -
+
+Já que $X \sim \chi^2(4)$, então $X \sim Ga(2, \frac{1}{2})$
+
+$P(X > 7) = 1 - P(X \leq 6) =  0.1991483$
+
+```{r}
+1 - pgamma(7, 2, 0.5)
+```
+
+
+5 -
+
+X:"O número de anos que uma caixa de som funciona."
+
+
+$X \sim Exp\Big(\frac{1}{8}\Big)$
+
+
+Pela propriedade da perda de memória:
+
+
+$$P(X > 16 + t | X > t) = P(X > 16)$$
+
+
+Logo:
+
+
+$$P(X > 16) = 1 - P( X \leq 16)$$
+
+
+
+
+$$1 - F(16) = 1 - (1 - e^{\frac{16}{8}}) = e^{-2} = 0.1353353$$
+
+```{r}
+1 - pexp(16, 1/8)
+```
+
+

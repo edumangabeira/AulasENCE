@@ -1,0 +1,114 @@
+---
+title: "Lista 6 Resolvida"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+1 - X:"Número de crianças loiras"
+
+$X \sim  bin(6, 0.25)$
+
+Basta obter  $P(X=3) = {6\choose3}(\frac{1}{4})^3 (\frac{3}{4})^3 \approx 0.13$
+
+2 - OBS: Eu resolvi no R, mas esperava que vocês desenhassem mesmo. Não tem um único jeito de fazer os gráficos, vou levar isso em consideração. Deixei o código visível para quem tiver curiosidade.
+
+
+(a)
+
+```{r}
+x = (0:2)
+p_x = c(0.25, 0.5, 0.25)
+plot(x,p_x, type="h", ylim = c(0,1), ylab = "p(x)",
+     main = "Função distribuição de probabilidade de X")
+points(x,p_x,pch=16,cex=2,col="dark red")
+```
+
+(b)
+
+```{r}
+x = (0:2)
+p_x = c(0.25, 0.5, 0.25)
+plot(x,cumsum(p_x), type="s",ylim = c(0,1), ylab = "F(x)",
+     main = "Função distribuição acumulada de X")
+```
+
+
+(c)  
+
+$$E[3X + 4] =  4 + 3E[X]]$$
+$$4+ 3(0\times0.25+1\times0.5 + 2\times0.25) = 7 $$
+
+3 - Correção, o K começa de 1, e não de 0. $k = 1,2,3,...,n$
+
+(a)
+
+$$M_X(t) = E(e^{tX})$$
+
+$$= pe^t \sum_{k=0}^{\infty} (e^t)^{k-1}(1-p)^{k-1} = pe^t \sum_{k=0}^{\infty} [e^t(1-p)]^{k-1}  $$
+
+$$ = \frac{p}{1-p} \sum_{k=0}^{\infty} [e^t(1-p)]^k $$
+Essa é uma série geométrica com soma dada por $S_n = \frac{1}{1-(1-p)e^t}$
+
+Então, a f.g.m. é dada por:
+
+$$ M_X(t) =  \frac{p}{(1-p)(1-(1-p)e^t)}$$
+
+
+(b)  Para obter o primeiro momento, optei por calcular $M'_X(0)$
+
+$$M'_X(t) = \frac{pe^t}{((1-p)e^t +1)^2}$$
+$$E[X]=M'_X(0) = \frac{p}{((p-1) +1)^2}$$
+$$E[X]= \frac{1}{p}$$
+
+
+
+4 - i) Nessa questão pode rolar um problema de interpretação. Como nada foi dito, é pra assumir que é COM REPOSIÇÃO, normalmente é assim que os livros tratam a questão. Caso fosse sem reposição vocês iriam usar outra distribuição, a hipergeométrica, mas acho que ainda não foi dado. Não vou tirar ponto de quem fez sem reposição, só fiquem ligados.
+
+ii) Quem fez sem reposição vai notar que deu quase a mesma coisa. Isso acontece porque a amostra é grande, vocês devem ver melhor esse resultado em probabilidade 1 mesmo, é super interessante.
+
+X: "Número de itens defeituosos"
+
+X ~ Bin(10, 0.06)
+
+(a) 
+
+
+$P(X=0) = {10\choose0} 0.06^00.94^{10} = 0.5386151$
+
+```{r}
+dbinom(0, 10, 0.06) 
+```
+
+(b)
+
+$P(X>2) = P(X\geq3) = 1 - P(X\leq2) = 1-[P(X=0)+P(X=1) + P(X=2)] = 0.01883784$
+
+```{r}
+ 1-(dbinom(0, 10, 0.06) +  dbinom(1, 10, 0.06) + dbinom(2, 10, 0.06))
+```
+5 - Você pode resolver essas questões de forma intuitiva, pensando no problema e fazendo a união e interseção de eventos. Eu escolhi resolver por distribuições conhecidas. A segunda acredito que vocês ainda não tenham visto, então aceitarei respostas que chegem à mesma conclusão usando outro método.
+
+
+a) X:"número de sucessos"
+
+X ~ Bin(5, 12/38)
+
+$P(X=0) = (\frac{26}{38})^5$
+
+b) Y:"número de fracassos até o primeiro sucesso"
+
+Y ~ Geo(12/38)
+
+$P(Y=3) = (\frac{26}{38})^3 \times (\frac{12}{38})$
+
+
+

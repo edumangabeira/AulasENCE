@@ -1,0 +1,120 @@
+---
+title: "Lista 5 - Entrega 06/11"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aviso
+
+**Apenas as cinco primeiras questões da lista serão avaliadas. As cinco últimas são para prática e possuem gabarito, portanto o envio não é necessário.**
+
+
+<br>
+
+1 -  Quatro ônibus levando 148 estudantes da mesma escola chegam a um estádio de futebol. Os ônibus levam, respectivamente, 40,33,25 e 50 estudantes. Um dos estudantes é selecionado aleatoriamente. Suponha que X represente o número de estudantes que estavam no ônibus que levava o estudante selecionado. Um dos 4 motoristas dos ônibus também é selecionado aleatoriamente. Seja Y o número de estudantes no ônibus do motorista selecionado.
+
+(a) Qual valor esperado você pensa ser maior, $E[X]$ ou $E[Y]$?
+(b) Calcule $E[X]$ e $E[Y]$. 
+
+
+
+2 - Sejam duas variáveis aleatórias X e Y com distribuições dadas abaixo:
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c| }
+ \hline
+ $X$ & 0 & 1 & 2 \\
+ \hline
+ $f_X(x)$ & 0.2 & 0.3 & 0.5 \\
+ \hline
+\end{tabular}
+\end{center}
+
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c| }
+ \hline
+ $Y$ & 0 & 1 & 2\\
+ \hline
+ $f_Y(y)$ & 0.4 & 0.4 & 0.2 \\
+ \hline
+\end{tabular}
+\end{center}
+
+
+Quem é maior? Var[X] ou Var[Y]?
+
+
+3 - Uma família tem n filhos com probabilidade $\alpha p^n$, $n \geq 1$, onde a $\alpha \leq \frac{(1 -p)}{p}$.
+
+(a) Que proporção de famílias não tem filhos?
+(b) Se cada filho tem a mesma probabilidade de ser um menino ou uma menina (independentemente um do outro), que proporção de famílias é formada por k meninos(e qualquer número de meninas)?
+
+
+4 - Mostre que se $P(A)> 0$, então:
+
+$$P(A\cap B|A) \geq P(A\cap B|A\cup B)$$
+
+
+5 - Jogam-se duas moedas.A primeira moeda dá cara com probabilidade 0,6, e a segunda, com probabilidade 0.7. Suponha que os resultados das jogadas sejam independentes e que X seja igual ao número total de caras que saem.
+
+(a) Determine $P[X = 1]$
+(b) Determine $Desv[X]$
+
+
+
+6 - Um réu julgado por três juízes é declarado culpado se pelo menos 2 dos juízes o condenarem. Suponha que, se o réu for De fato culpado, cada juiz terá probabilidade de 0.7 de condená-lo, de forma independente. Por outro lado, se o réu for de fato inocente, essa probabilidade cai para 0.2. Se 70% dos réus são culpados, calcule a probabilidade condicional de o juiz número 3 condenar um réu dado que:
+
+(a) os juízes 1 e 2 o tenham condenado;
+(b) um dos juízes 1 e 2 o tenha considerado culpado e o outro o tenha considerado inocente;
+(c) os juízes 1 e 2 o tenham considerado
+inocente.
+
+7 - A e B se alternam no lançamento de um par de dados, parando quando A obtém uma soma igual a 9 ou quando B obtém uma soma igual a 6. Supondo que A role o dado primeiro, determine a probabilidade de que a última jogada seja feita por A.
+
+8 - Sabe-se que os brinquedos em miniatura produzidos por certa companhia têm probabilidade de defeito igual a 0,01, independentemente uns do outros. A companhia vende os brinquedos em embalagens com 10 e oferece uma garantia de devolução se mais que 1 brinquedo em uma embalagem com 10 brinquedos apresentar defeito. Se alguém compra 3 embalagens, qual é a probabilidade de que ele ou ela devolva exatamente 1 delas?
+
+
+9 - Obtenha o primeiro momento de X, onde $P(X = k) = \frac{e^{-\lambda}\lambda^k}{k!}$. Se possível tente achar usando os dois métodos conhecidos. Qual foi mais fácil?
+
+10 - Suponha que o número de acidentes que ocorrem em uma autoestrada em cada dia seja dado pela variável aleatória X do item 9, com parâmetro $\lambda = 3$.
+
+(a) Determine a probabilidade de que 3 ou mais acidentes ocorram hoje.
+(b) Repita a letra (a) supondo que pelo menos 1 acidente ocorra hoje.
+
+
+## Gabarito
+
+6 -
+
+(a) $\frac{97}{142}$
+
+(b) $\frac{15}{26}$
+
+(c) $\frac{36}{102}$
+
+
+
+7 - $P_A = \frac{1}{9} + \frac{8}{9} (1-P_B)$
+
+$P_B = \frac{5}{36} + \frac{31}{36} (1-P_A)$
+
+8 - $p = 1 - [(0.99)^{10} + {10\choose9}(0.99)^9(0.01)]$, logo
+
+$P(X=1) = 3p(1-p)^2$
+
+9 - $\lambda$
+
+10 - 
+
+(a) $1 - \frac{17}{2}e^{-3}$
+
+(b) $\frac{1 - \frac{17}{2}e^{-3}}{1-e^{-3}}$

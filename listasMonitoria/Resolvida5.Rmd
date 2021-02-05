@@ -1,0 +1,128 @@
+---
+title: "Lista 5 Resolvida"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+1 - 
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c|c| }
+ \hline
+ $X$ & 25 & 33 & 40 & 50 \\
+ \hline
+ $f_X(x)$ & 25/148 & 33/148 & 40/148 & 50/148 \\
+ \hline
+\end{tabular}
+\end{center}
+
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c|c| }
+ \hline
+ $Y$ & 25 & 33 & 40 & 50 \\
+ \hline
+ $f_Y(y)$ & 1/4 & 1/4 & 1/4 & 1/4 \\
+ \hline
+\end{tabular}
+\end{center}
+
+(a) E[X], já que é igualmente provável que o motorista seja de qualquer ônibus, enquanto a probabilidade de um aluno ser selecionado de um ônibus muito cheio é mais alta do que de um ônibus menos cheio.
+
+(b) $E[X] \approx 39.28$ \ $E[Y] = 37$
+
+
+
+2 - Obtenha $E[X] = 1.3$ e $E[X^2] = 2.3$, logo $Var[X] = 2.3 - (1.3)^2  = 0.61$.
+
+Obtenha $E[Y] = 0.8$ e $E[Y^2] = 1.2$, logo $Var[Y] = 1.2 - (0.8)^2  = 0.56$
+
+Logo, $Var[X] > Var[Y]$
+
+3 - 
+
+# Atenção: como eu cometi um erro de digitação na letra (a), não considerei essa na correção, mas vou deixar a resposta aqui. A letra (b) é um pouco acima do que vocês precisam pra lista, então também desconsiderei.
+
+(a) 
+
+X: "Número de filhos"
+
+$$P(X=0) = 1 - \sum_{i=1}^{\infty} \alpha p^n$$
+Se tirarmos um "p" do somatório, essa série é geométrica com soma dada por $\frac{\alpha}{1-p}$
+
+Logo,
+
+
+$$1 - \sum_{i=1}^{\infty} \alpha p^n = 1-\frac{\alpha p}{1-p}$$
+
+
+4 - 
+
+(i)
+
+$$P(A\cap B| A) = \frac{P(A\cap B)}{P(A)}$$
+(ii)
+
+$$P(A\cap B| A\cup B) = \frac{P(A\cap B)}{P(A\cup B)}$$
+
+Como $P(A)\leq P(A\cup B)$
+
+
+$$\frac{P(A\cap B)}{P(A)} \geq \frac{P(A\cap B)}{P(A\cup B)}$$ 
+
+Portanto, $P(A\cap B| A) \geq P(A\cap B| A\cup B)$
+
+
+
+5 - $$P(X=1) = 0.6 \times 0.3 + 0.4 \times 0.7 = 0.46$$
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c| }
+ \hline
+ $X$ & 0 & 1 & 2 \\
+ \hline
+ $f_X(x)$ & 0.12 & 0.46 & 0.42 \\
+ \hline
+\end{tabular}
+\end{center}
+
+$E[X] = 1.3$
+
+$E[X^2]= 2.14$
+
+$$Desv[X] = \sqrt{(E[X^2] - E[X]^2)}$$
+$$Desv[X] = \sqrt{2.14 - (1.3)^2} \approx 0.67  $$
+
+6 -
+
+$J_i$: "O Juiz $i$ vota que o réu é culpado" $i = 1, 2, 3$
+
+K: "O réu é culpado"
+
+(a)
+
+$$P(J_3|J_1 \cap J_2) = \frac{P(J_3 \cap J_1 \cap J_2)}{P(J_1 \cap J_2)} $$
+
+
+$$\frac{P(J_1|K)P(K) + P(J_1|K^c)P(K^c) + P(J_2|K)P(K) + P(J_2|K^c)P(K^c)+P(J_3|K)P(K) + P(J_3|K^c)P(K^c)}{P(J_1|K)P(K) + P(J_1|K^c)P(K^c) + P(J_2|K)P(K) + P(J_2|K^c)P(K^c)}$$
+
+$$ = \frac{0.7\times(0.7)^3 + 0.3\times(0.2)^3}{0.7\times(0.7)^2 + 0.3\times(0.2)^2} = \frac{97}{142} $$
+(b)
+
+$$ P(J_3|(J_1^c\cap J_2)\cup(J_1\cap J_2^c))= \frac{0.7\times0.7\times2(0.7)(0.3) + 0.3\times2(0.2)(0.2)(0.8)}{0.7\times2(0.7)(0.3) + 0.3\times2(0.2)(0.8)} = \frac{15}{26} $$
+
+
+(c)
+
+$$P(J_3|J_1^c \cap J_2^c) = \frac{0.7\times0.7\times(0.3)^2 + 0.3\times0.2\times(0.8^2)}{0.7\times(0.3)^2 + 0.3\times(0.8^2)} = \frac{33}{102} $$
+
+

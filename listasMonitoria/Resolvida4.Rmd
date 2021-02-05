@@ -1,0 +1,155 @@
+---
+title: "Lista 4 Resolvida"
+author: "Probabilidade 1"
+date: 'monitor: Eduardo Freire'
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+1 -
+
+$$g(X) = X^2$$
+$$ E[X^2]  = E[g(X)]$$
+
+$$E[g(X)] = \sum_x g(x)f(x)$$
+
+$$ E[X^2] =(-1)^2\times 0.2 + (0)^2\times 0.5 + (1)^2\times 0.2 + (2)^2\times 0.1 = 0.8 $$
+
+
+2 - 
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c|c|c|c| }
+ \hline
+ $Z$ & 1 & 2 & 3 & 4 & 5 & 6 \\
+ \hline
+ $f_Z(z)$ & $\frac{1}{9}$ & $\frac{2}{9}$ & $\frac{1}{9}$ & $\frac{2}{9}$ & $\frac{1}{9}$ & $\frac{2}{9}$ \\
+ \hline
+\end{tabular}
+\end{center}
+
+$$ E[Z] =(1)\times \frac{1}{9} + (2)\times \frac{2}{9} + (3)\times \frac{1}{9} + (4)\times \frac{2}{9} + (5)\times \frac{1}{9} + (6)\times \frac{2}{9}= \frac{33}{9} $$
+
+$$ E[Z^2] =(1)\times \frac{1}{9} + (2^2)\times \frac{2}{9} + (3^2)\times \frac{1}{9} + (4^2)\times \frac{2}{9} + (5^2)\times \frac{1}{9} + (6^2)\times \frac{2}{9}= \frac{147}{9} $$
+
+$$Var[Z] =E[Z^2] - E[Z] ^2 = \frac{147}{9} - \Big(\frac{33}{9}\Big)^2 = \frac{234}{81}$$ 
+
+3 -  
+
+$$E[Y] = E\Big[\frac{X}{\sigma} - \frac{\mu}{\sigma}\Big]$$
+
+$$= -\frac{\mu}{\sigma} + \frac{1}{\sigma}E[X]$$
+$$= \frac{1}{\sigma}(\mu - E[X])$$
+
+$$= \frac{1}{\sigma}(\mu - \mu) = 0$$
+
+4 - 
+
+A: "Bolas da mesma cor"
+
+$P(A) = \frac{5}{10} \times \frac{4}{9} + \frac{5}{10} \times \frac{4}{9} = \frac{4}{9}$
+
+X: "ganhos em reais"
+
+\begin{center}
+\begin{tabular}{ |c|c|c| }
+ \hline
+ $X$ & 1.10 & -1 \\
+ \hline
+ $f_X(x)$ & $\frac{4}{9}$ & $\frac{5}{9}$ \\
+ \hline
+\end{tabular}
+\end{center}
+
+$$E[X] = 1.1 \times \frac{4}{9} -  \frac{5}{9} = -\frac{0.6}{9} \approx - 0.067$$
+
+$$Var[X] = \Big[(1.1)^2 \times \frac{4}{9} +  \frac{5}{9}\Big] - \Big[-\frac{0.6}{9}\Big]^2 \approx 1.089$$
+
+5 - A variável indicadora nos dará a seguinte distribuição para Y:
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c|c|c|c| }
+ \hline
+ $Y$ & 1 & 2 & 3 & 4 & 5 & 6 \\
+ \hline
+ $f_Y(y)$ & $\frac{5}{18}$ & $\frac{5}{18}$ & $\frac{5}{18}$ & $\frac{1}{18}$ & $\frac{1}{18}$ & $\frac{1}{18}$ \\
+ \hline
+\end{tabular}
+\end{center}
+
+
+$$E[Y] = (1)\times \frac{5}{18} + (2)\times \frac{5}{18} + (3)\times \frac{5}{18} + (4)\times \frac{1}{18} + (5)\times \frac{1}{18} + (6)\times \frac{1}{18}= \frac{45}{18}  $$
+
+
+$$E[Y^2] =(1)\times \frac{5}{18} + (2^2)\times \frac{5}{18} + (3^2)\times \frac{5}{18} + (4^2)\times \frac{1}{18} + (5^2) \times \frac{1}{18} + (6^2) \times\frac{1}{18}= \frac{147}{18}$$
+$$Var[Y] = E[Y^2] - E[Y] ^2 = \frac{147}{18} - \Big(\frac{45}{18}\Big)^2 = \frac{621}{324}$$
+
+$$Desv[X]=\sqrt{\frac{621}{324}}$$
+6 - Basta olhar o gabarito.
+
+7 - Seja $E[X] = \mu$. Pela linearidade da esperança, temos que $E[aX+b] = aE[X] + b$. Logo, $E[aX+b] = a\mu + b$. Assim,
+
+
+$$Var(aX+b) = E[(aX+b - a\mu -b)^2] = e[(aX-a\mu)^2] = a^2Var(X)$$
+
+8 - $$E[nota] = [1 - (1 -p)^2]p^* + [1 -p^2][1-p^*]$$
+
+
+Para obter o máximo, vamos calcular $\frac{d}{dp} = 0$.
+
+
+$$ 2(1-p)p^* - 2p(1-p^*) = 0$$
+$$ (1-p)p^* - p(1-p^*) = 0$$
+$$ p^* - pp^* - p + pp^* = 0$$
+
+$$ p^* = p$$
+9 - Como a $E[X]$ se aproxima da média $\mu$, para obter a esperança basta calcular a média aritmética dos valores encontrados na simulação. 
+
+$$\frac{78 + 110 + 89 + 68 + 157 + 136 + 92 + 120}{8} = 106.25$$
+Como só interessa a parte inteira, em média são necessários 106 sacos para completar a coleção. Convertendo para reais fica: $106 \times 7 = 742$. Então, a média em reais é de R$742,00.
+
+Para obter a probabilidade de se gastar 840 reais ou mais, no pior dos casos, aplicamos a desigualdade de Markov para obter o limite superior. Como estamos usando X como variável aleatória e ela só diz respeito aos sacos, usamos a primeira média encontrada, mas também é possível definir uma nova variável aleatória Y para o preço em reais, o resultado obtido será o mesmo. Convertendo R$840 para número de sacos, obtemos 120 sacos.
+
+
+$$P(X \geq 120)  \leq \frac{106}{120}= 0.88333$$
+Obs: No gabarito está um pouco diferente, pois na conversão não lembrei de usar só a parte inteira. Nesse caso não faz tanta diferença, pois 88,3% ou 88,541% são próximos e o risco de ultrapassar o orçamento no pior dos casos possíveis continua parecido.
+
+10 - Existem duas formas de se obter o resultado. A primeira é calculando $E[X^2]$, porém será usada apenas a segunda, pela função geradora de momentos.
+
+A função geradora de momentos $M(t)$ da variável aleatória $X$ é definida para todos os valores reais de $t$ como:
+
+$$M(t) = E[e^{tX}]$$
+
+Portanto, a função geradora de momentos para o variável aleatória X dada na questão é:
+
+
+$$M(t) = \sum_{k=0}^{n}e^{tk} {n\choose k} p^k (1-p)^{n-k}$$
+
+$$ = \sum_{k=0}^{n} {n\choose k} (pe^t)^k (1-p)^{n-k}$$
+
+Observe que o lado direito da equação acima pode ser escrito como um binômio de newton, logo:
+
+
+$$ = (pe^t + 1-p)^n$$
+
+Como se pede o segundo momento, basta calcular a segunda derivada de $M(t)$ para $t=0$.
+
+
+$$M^{''}(t) = n(n-1)(pe^t+1-p)^{n-2}(pe^t)^2 + n(pe^t + 1-p)^{n-1} pe^t$$
+
+Portanto,
+
+$$ E[X^2] = M^{''}(0) = n(n-1)p^2 + np$$
+
+
+
+
+
+
