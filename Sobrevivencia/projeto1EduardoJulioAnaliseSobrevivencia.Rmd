@@ -1,0 +1,804 @@
+---
+title: "Projeto 1 - Análise de sobrevivência"
+author: "Eduardo Freire, Julio Magalhães"
+date: "14/09/2022"
+output:   
+  rmdformats::downcute:
+    self_contained: True
+    code_folding: hide
+header-includes: 
+  \usepackage{dcolumn}
+  \usepackage{placeins}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = F, warning = F)
+set.seed(202010)
+```
+
+## Introdução
+
+No trabalho presente analisamos o consumo de drogas por estudantes do ensino fundamental em escolas públicas da cidade do Rio de Janeiro, mais especificamente o tempo até um estudante do 9º ano experimentar uma droga pela primeira vez, um problema que envolve dados censurados e o tempo até o evento "estudante consumir droga" ocorrer. O cenário descrito leva a crer que uma análise de sobrevivência é adequada para compreender com mais detalhes a situação nessas escolas.
+
+## Descrição dos dados
+
+```{r}
+library(cowplot)
+require(survival)
+require(flexsurv)
+library(readr)
+library(dplyr)
+library(kableExtra)
+library(ggplot2)
+```
+
+```{r}
+drogas <- read_csv("Drogas-RJ.csv")
+names(drogas) <- c("tempo", "censura", "sexo", "cor", "mora_com_mae", "tempo_livre_pais_cientes", "alcool", "cigarro", "pais_fumantes", "freq_solidao", "amigos_usuarios")
+
+head(drogas) %>% 
+kable(caption = "Primeiras observações do dataset") %>%
+  kable_styling(full_width=F)
+```
+
+Os dados são provenientes da Pesquisa Nacional de Saúde do Escolar
+(PeNSE) de 2015, conduzida pelo IBGE(ou seja, um questionário), e se referem ao tempo até a experimentação de drogas ilícitas em uma amostra de estudantes do 9º ano do ensino fundamental de escolas públicas da cidade do Rio de Janeiro.
+
+
+- tempo – Tempo até o primeiro uso de drogas - como: maconha, cocaína, crack, loló, lançaperfume, ecstasy, oxy, etc (variável resposta)
+
+- censura – Indicador de censura (0=censura e 1=falha)
+
+As demais variáveis se referem às seguintes perguntas feitas na pesquisa:
+
+- sexo – Qual é o seu sexo? (1=Masculino e 2=Feminino)
+
+- cor – Qual é a sua cor ou raça? (1=Branca, 2=Preta, 3=Amarela, 4=Parda, 5=Indígena,
+99=Não informado)
+
+- mora_com_mae – Você mora com sua mãe? (1=Sim, 2=Não, 99=Não informado)
+
+- tempo_livre_pais_cientes – NOS ÚLTIMOS 30 DIAS, com que frequência seus pais ou responsáveis sabiam
+realmente o que você estava fazendo em seu tempo livre? (1=Nunca, 2=Raramente, 3=Às
+vezes, 4=Na maior parte do tempo, 5=Sempre, 99=Não informado)
+
+- alcool - Alguma vez na vida você tomou uma dose de bebida alcoólica? (Uma dose equivale a
+uma lata de cerveja ou uma taça de vinho ou uma dose de cachaça ou uísque etc) (1=Sim, 2=Não,
+99=Não informado)
+
+- cigarro – Alguma vez na vida, você já fumou cigarro, mesmo uma ou duas tragadas? (1=Sim,
+2=Não, 99=Não informado)
+
+- pais_fumantes – Algum de seus pais ou responsáveis fuma? (1=Nenhum deles, 2=Só meu pai ou
+responsável do sexo masculino, 3=Só minha mãe ou responsável do sexo feminino, 4=Meu pai e
+minha mãe ou responsáveis, 5=Não sei, 99=Não informado)
+
+- freq_solidao – NOS ÚLTIMOS 12 MESES com que frequência tem se sentido sozinho(a)? (1=Nunca,
+2=Raramente, 3=Às vezes, 4=Na maioria das vezes, 5=Sempre, 99=Não informado)
+
+- amigos_usuários – Quantos amigos seus usam drogas? (1=Nenhum, 2=Poucos, 3=Alguns, 4=A maioria,
+5=Todos, 6=Não sei, 99=Não informado)
+
+O arquivo contém algumas variáveis selecionadas dos microdados originais (que podem ser encontrados
+em https://www.ibge.gov.br/estatisticas/sociais/educacao/9134-pesquisa-nacional-de-saude-doescolar.html?=&t=microdados).
+
+# Análise descritiva
+
+## Porcentagem de falhas
+
+Podemos observar por meio da coluna de censura que a taxa de falhas é alta: cerca de 8,7% dos alunos já consumiram algum tipo de droga no período de estudo. Porém, do ponto de vista técnico, temos uma base com um nível de censura bem elevado, o que pode dificultar a modelagem.
+
+```{r}
+falha <- mean(drogas$censura)*100
+nivel_censura <- (1 - mean(drogas$censura))*100
+taxas <- rbind(falha, nivel_censura)
+row.names(taxas) <- c("falha", "censura")
+kable(taxas, caption = "Taxas de falha e de censura(%)") %>%
+kable_styling(full_width = F)
+```
+
+
+## Tempo
+
+```{r}
+drogas_falha <- drogas %>%
+  dplyr::filter(censura==1)
+
+ggplot(drogas_falha, aes(tempo)) + 
+    geom_bar(fill="slateblue", alpha=0.8) + 
+    xlab("Idade") +
+    ylab("Quantidade") +
+    ggtitle("Idade dos respondentes que consumiram drogas.")
+```
+
+Algo está esquisto nesse gráfico de barras, uma tabela pode ser mais eficaz para entender o que há de estranho.
+
+```{r}
+drogas_falha %>%
+  dplyr::select(tempo) %>%
+  group_by(tempo) %>% 
+  count() %>% 
+  kable(caption = "Idade dos respondentes") %>%
+  kable_styling(full_width=F)
+```
+
+
+Como é possível observar, temos alunos que com 7 anos experimentaram pela primeira vez alguma droga como: maconha, cocaína, crack, loló, lançaperfume, ecstasy, oxy, etc. É um resultado no mínimo espantoso, mas a pesquisa passou por muitas etapas de validação para isso ter sido incluído por engano. Não vamos remover esses respondentes da análise, pois são pouquíssimas observações e possivelmente não serão tão influentes nos modelos.
+
+## Sexo
+
+
+A base não está muito desproporcional, apenas mais algumas meninas do que meninos.
+
+```{r}
+masc <- 100*length(drogas$sexo[drogas$sexo==1])/nrow(drogas)
+fem <- 100*length(drogas$sexo[drogas$sexo==2])/nrow(drogas)
+taxas <- rbind(fem, masc)
+row.names(taxas) <- c("feminino", "masculino")
+kable(taxas, caption = "Proporção sexo(%)") %>%
+kable_styling(full_width = F)
+```
+
+## Cor
+
+```{r}
+ggplot(drogas, aes(x=as.factor(cor))) + 
+    geom_bar(fill="#f2ce6b", alpha=0.8) + 
+    xlab("Cor") +
+    ylab("Quantidade") +
+    scale_x_discrete(labels=c("Branca", "Preta", "Amarela", "Parda", "Indígena", "Não informado")) +
+    ggtitle("Cor dos respondentes.")
+```
+
+## Consumo de álcool
+
+```{r}
+sim <- 100*length(drogas$sexo[drogas$alcool==1])/nrow(drogas)
+nao <- 100*length(drogas$sexo[drogas$alcool==2])/nrow(drogas)
+taxas <- rbind(sim, nao)
+row.names(taxas) <- c("sim", "não")
+kable(taxas, caption = "Respondentes que já ingeriram álcool(%).") %>%
+kable_styling(full_width = F)
+```
+
+
+## Moradia
+
+```{r}
+sim <- 100*length(drogas$sexo[drogas$mora_com_mae==1])/nrow(drogas)
+nao <- 100*length(drogas$sexo[drogas$mora_com_mae==2])/nrow(drogas)
+taxas <- rbind(sim, nao)
+row.names(taxas) <- c("sim", "não")
+kable(taxas, caption = "Respondentes que moram com a mãe(%).") %>%
+kable_styling(full_width = F)
+```
+
+## Tempo livre
+
+```{r}
+ggplot(drogas, aes(x=as.factor(tempo_livre_pais_cientes))) + 
+    geom_bar(fill="#f2ce6b", alpha=0.8) + 
+    xlab("Frequência") +
+    ylab("Quantidade") +
+    scale_x_discrete(labels=c("Nunca", "Raramente", "Às vezes", "Na maior parte do tempo", "Sempre", "Não informado")) +
+    ggtitle("Frequência com que pais sabem o que os respondentes fazem no tempo livre")
+```
+
+## Cigarro 
+
+```{r}
+sim <- 100*length(drogas$sexo[drogas$cigarro==1])/nrow(drogas)
+nao <- 100*length(drogas$sexo[drogas$cigarro==2])/nrow(drogas)
+taxas <- rbind(sim, nao)
+row.names(taxas) <- c("sim", "não")
+kable(taxas, caption = "Respondentes que já fumaram(%).") %>%
+kable_styling(full_width = F)
+```
+
+## Solidão
+
+```{r}
+ggplot(drogas, aes(x=as.factor(freq_solidao))) + 
+    geom_bar(fill="#967788", alpha=0.8) + 
+    xlab("Frequência") +
+    ylab("Quantidade") +
+    scale_x_discrete(labels=c("Nunca", "Raramente", "Às vezes", "Na maior parte do tempo", "Sempre", "Não informado")) +
+    ggtitle("Frequência com que os respondentes se sentem solitários.")
+```
+
+## Analisando os pais e amigos
+
+Uma análise interessante a se fazer é avaliar se pais fumantes e amigos usuários podem influenciar de alguma forma os estudantes no uso de drogas.
+
+```{r}
+drogas_g1 <- drogas_falha %>%
+  dplyr::filter(pais_fumantes==2 & amigos_usuarios==4)
+
+drogas_g2 <- drogas_falha %>%
+  dplyr::filter(pais_fumantes==2 & amigos_usuarios==2)
+
+drogas_g3 <- drogas_falha %>%
+  dplyr::filter(pais_fumantes!=2 & amigos_usuarios==4)
+
+drogas_g4 <- drogas_falha %>%
+  dplyr::filter(pais_fumantes!=2 & amigos_usuarios==2)
+
+filtra <- function(g1, g2=1){
+  if (g2 > 0){
+  return (
+    drogas_falha %>% dplyr::filter(pais_fumantes==2 & amigos_usuarios==g1))
+  }else{
+    return (
+    drogas_falha %>% dplyr::filter(pais_fumantes!=2 & amigos_usuarios==g1))
+  }
+}
+
+conta <- function(dados, legenda, cor) {
+  return(
+   ggplot(dados, aes(tempo)) + 
+    geom_bar(fill=cor, alpha=0.8) + 
+    xlab("Idade") +
+    ylab("Quantidade") +
+    ggtitle(legenda)+ theme(plot.title = element_text(size=10))
+  )
+}
+```
+
+
+```{r}
+g1 <- conta(filtra(2), "Poucos amigos usuários e só pai fumante", "#42f557")
+g2 <- conta(filtra(4), "Maioria dos amigos usuários e só pai fumante", "#b37b1b")
+g3 <- conta(filtra(2,-1), "Poucos amigos usuários e nenhum pai fumante", "#79a9bd")
+g4 <- conta(filtra(4,-1), "Maioria dos amigos usuários e nenhum pai fumante", "#eb7a83")
+plot_grid(g1, g2, g3, g4, labels="AUTO")
+```
+
+
+# Análise de sobrevivência(modelos probabilísticos)
+
+A seguir iremos prosseguir com a análise de sobrevivência. Iremos analisar a probabilidade de alunos terem experimentado alguma droga considerando algumas idades.
+
+# Estimação usando exponencial
+
+```{r}
+tempo <- drogas$tempo
+censura <- drogas$censura
+survival_obj <- Surv(tempo, censura)
+```
+
+A parametrização da exponencial utilizada pelo pacote survival não é o que usamos usualmente, por isso corrigimos no código o parâmetro de escala.
+
+```{r}
+ajuste_exp <- survreg(survival_obj~1,dist='exponential')
+ajuste_exp
+```
+
+A equivalência entre o parâmetro do output do R e o usado é $e^{\alpha}$:
+
+```{r}
+# EMV do parametro de escala da Exponencial
+alfa_exp <- exp(ajuste_exp$coefficients[1]) 
+alfa_exp
+```
+
+É preciso utilizar o método delta para calcular var[g(\theta)].
+
+$$var[g(\theta)] = var(\theta)\times[g'(\theta)]^2, \ \text{onde} \ g'(\theta)= exp(\theta)$$
+
+```{r}
+# EMV da variancia do parametro de escala
+varalfa_exp <- ajuste_exp$var[1, 1]*(exp(ajuste_exp$coefficient[1]))^2 
+```
+
+Por fim, obtemos o intervalo de confiança de 95% para $\alpha$.
+
+```{r}
+# IC de 95% para o parametro de escala
+IC <- c(alfa_exp-qnorm(0.975)*sqrt(varalfa_exp),alfa_exp+qnorm(0.975)*sqrt(varalfa_exp)) 
+knitr::kable(IC, col.names=c("IC"), caption = "IC do parâmetro de escala.")
+```
+
+Essa também é a estimativa pontual e o IC para o tempo 		
+médio até o primeiro uso de drogas, pois na distribuição Exponencial, a estimativa da média da distribuição é o próprio $\alpha$.
+
+## Estimando a função taxa de falha
+
+```{r}
+lambda_exp <-1/alfa_exp
+lambda_exp
+```
+
+```{r}
+# criando uma funcao no R para a taxa de falha
+lambda_exp <- function(t){1/alfa_exp*(t^0)}
+# plotando a funcao de taxa de falha
+plot(lambda_exp,ylab=expression(lambda(t)),xlab="t",xlim=c(6,22)) 	
+```
+
+A função de taxa de falha, que nesse caso é constante (propriedade de falta de memória da distribuição Exponencial), é estimada como sendo 0,006. Esse é o risco instantâneo de uso de drogas pela primeira vez para um jovem.	
+
+
+## Percentis
+
+comparamos 3 percentis pequenos, pois não faz sentido escolher percentis muito grandes para o problema em questão. 10% dos jovens terem consumido drogas até o 9º ano já é um número bem preocupante, não há necessidade de testar percentis muito altos pois dificilmente eles irão ocorrer. A nível de comparação, estima-se pela PeNSE 2019 que 13% dos escolares do Brasil de 13 a 17 anos já usaram droga ilícita. Como o Sudeste apresenta números mais altos(em torno de 16%), e a escola selecionada possui uma taxa de falha de 8.7% escolhemos percentis que podem ser metas de políticas de redução do consumo de drogas(10% - piora, 8% melhora razoável, 5% melhora substancial).
+
+
+## Interpretação do percentil
+
+
+```{r}
+perc_exp<-function(p){-alfa_exp*log(1-p)}
+```
+
+## estimando o percentil 5%
+
+```{r}
+quantis_exp <- sapply(c(0.05, 0.08, 0.1),perc_exp)
+```
+
+```{r}
+perc_exp(p=0.05)
+```
+
+## estimando o percentil 8%
+
+```{r}
+perc_exp(p=0.08)
+```
+
+## estimando o percentil 10%
+
+```{r}
+perc_exp(p=0.1)
+```
+
+Estima-se que:
+
+- Aos 8.41 anos de idade, 5% dos alunos terão experimentado algum tipo de droga;
+
+- Aos 13.68 anos de idade, 8% dos alunos terão experimentado algum tipo de droga, e
+
+- Aos 17.28 anos de idade, 10% dos alunos terão experimentado algum tipo de droga. 
+
+
+## plotando o percentil versus p
+
+```{r}
+plot(perc_exp,ylab="tp (em meses)",xlab="p")
+```
+
+## Função de sobrevivência da distribuição exponencial
+
+```{r}	
+S_exp<-function(t){exp(-t/alfa_exp)}	
+var_S_exp<-function(t){varalfa_exp*((t/alfa_exp^2)*exp(-t/alfa_exp))^2}	
+plot(S_exp,ylab="S(t)",xlab="t (idade)",xlim=c(6,22))	
+```	
+
+Essa é a função de sobrevivência da exponencial.	
+
+# Estimação usando Weibull
+
+```{r}	
+tempo <- drogas$tempo	
+censura <- drogas$censura	
+survival_obj <- Surv(tempo, censura)	
+```
+
+A weibull também está usando uma parametrização diferente no pacote survival. O `scale` da saída do `survreg` é o inverso do parâmetro de forma(gama) e o parâmetro de escala(alfa) é a exponencial do intercepto.
+
+```{r}	
+ajuste_wei <- survreg(survival_obj~1,dist='weibull')	
+ajuste_wei	
+```	
+
+A equivalência entre o parâmetro de escala e de forma do R e o usado, respectivamente é $e^{\alpha}$ e $1/\alpha$:
+
+```{r}	
+# EMV do parametro de escala e de forma da Weibull	
+alfa_wei <- exp(ajuste_wei$coefficients[1])	
+gama_wei <- 1/ajuste_wei$scale	
+alfa_gama <- cbind(gama_wei,alfa_wei)
+rownames(alfa_gama) <- c("EMV")
+knitr::kable(alfa_gama, col.names=c("escala", "forma"),  caption = "EMV dos parâmetros")
+```
+
+Variâncias dos parâmetros da Weibull para cáculo do IC de 95% de cada:
+
+```{r}	
+varalfa_wei <- ajuste_wei$var[1,1]*exp(ajuste_wei$coefficients[1])^2	
+vargama_wei <- ajuste_wei$var[2,2]*(-1/ajuste_wei$scale^2)^2
+varalfa_gama <- cbind(varalfa_wei, vargama_wei)
+rownames(varalfa_gama) <- c("Variância")
+knitr::kable(varalfa_gama, col.names=c("escala", "forma"), caption = "Variância dos parâmetros")
+```	
+
+Por fim, obtemos o intervalo de confiança de 95% para alpha e gama. Toda estimativa pontual deve vir acompanhada do intervalo de confiança. Como para o parâmetro de forma tem o limite inferior do intervalo negativo, é só truncar no zero. Isso pode acontecer pois estamos usando teoria assintótica para construir os intervalos.
+
+```{r}	
+IC_alfa <- c(alfa_wei-qnorm(0.975)*sqrt(varalfa_wei),alfa_wei+qnorm(0.975)*sqrt(varalfa_wei))	
+IC_gama <- c(gama_wei-qnorm(0.975)*sqrt(vargama_wei),gama_wei+qnorm(0.975)*sqrt(vargama_wei))
+IC_gama[1] <- 0
+icalfa_gama <- cbind(IC_alfa,IC_gama)
+rownames(icalfa_gama) <- c("Inferior", "Superior")
+knitr::kable(icalfa_gama, col.names=c("escala", "forma"), caption = "IC 95% dos parâmetros")
+```
+
+## Estimando tempo médio até primeiro uso
+
+Uma vez obtido os parâmetros, o tempo médio até um jovem utilizar droga pela primeira vez é dado por:	
+
+```{r}	
+E_Twei=alfa_wei*gamma(1+1/gama_wei)	
+E_Twei	
+```
+
+Portanto estima-se que 17.59 é o tempo médio de idade do jovem usar novamente droga.	
+
+## Estimando a função taxa de falha da Weibull	
+
+```{r}	
+lambda_wei<-function(t){gama_wei/alfa_wei^gama_wei*t^(gama_wei-1)}	
+plot(lambda_wei,ylab=expression(lambda(t)),xlab="t (idade)",xlim=c(6,22))	
+```
+
+A função de taxa de falhas estimada pelo ajuste da distribuição Weibull é crescente, diferente do observado quando se utilizou a distribuição Exponencial que é constante. Logo, os jovens tornam-se mais suscetíveis a uma falha instantânea à medida em que ficam mais velhos.	
+
+## Estimando percentil da Weibull	
+
+```{r}	
+perc_wei<-function(p){alfa_wei*(-log(1-p))^(1/gama_wei)}	
+```	
+
+## estimando o percentil 5%	
+
+```{r}
+quantis_wei <- sapply(c(0.05, 0.08, 0.1),perc_wei)
+```
+
+```{r}	
+perc_wei(p=0.05)	
+```	
+
+## estimando o percentil 8%	
+
+```{r}	
+perc_wei(p=0.08)	
+```	
+
+## estimando o percentil 10%	
+
+```{r}	
+perc_wei(p=0.1)	
+```	
+
+Estima-se que:
+
+- Aos 13.8 anos de idade, 5% dos alunos terão experimentado algum tipo de droga;
+
+- Aos 14.48 anos de idade, 8% dos alunos terão experimentado algum tipo de droga, e
+
+- Aos 14.82 anos de idade, 10% dos alunos terão experimentado algum tipo de droga. 	
+
+## plotando o percentil versus p
+
+```{r}	
+plot(perc_wei,ylab="tp (idade)",xlab="p")	
+```
+
+## Estimando a função de sobrevivência
+
+```{r}	
+S_wei<-function(t){exp(-(t/alfa_wei)^gama_wei)}	
+plot(S_wei,ylab="S(t)",xlab="t (em meses)",xlim=c(6,22))	
+```	
+
+Usando uma Weibull não se tem um ganho substancial, os valores são bem próximos
+
+		
+# Estimação usando Log-Normal	
+
+```{r}	
+tempo <- drogas$tempo	
+censura <- drogas$censura	
+survival_obj <- Surv(tempo, censura)	
+```
+
+Só vamos precisar usar método delta para as funções de falha, percentis, sobrevivência.
+
+```{r}	
+ajuste_logn <- survreg(survival_obj~1,dist='lognorm')	
+ajuste_logn	
+```
+
+As estimativas obtidas para os parâmetros de locação e escala da distribuição Log-normal são, com 95% de confiança, respectivamente:
+
+```{r}	
+# EMV do parametro de locação e escala da Log-Normal	
+mu_logn<-ajuste_logn$coefficients[1]	
+sigma_logn<-ajuste_logn$scale#	
+musigma <- cbind(mu_logn,sigma_logn)
+rownames(musigma) <- c("EMV")
+knitr::kable(musigma, col.names=c("locação", "escala"), caption = "EMV dos parâmetros")
+```
+
+```{r}
+var_mu<-ajuste_logn$var[1,1]	
+var_sigma<-ajuste_logn$var[2,2]	
+var_musigma <- cbind(var_mu,var_sigma)
+rownames(var_musigma) <- c("Variância")
+knitr::kable(var_musigma, col.names=c("locação", "escala"), caption = "Variância dos parâmetros")
+```
+
+```{r}
+IC_mu<-c(mu_logn-qnorm(0.975)*sqrt(var_mu),mu_logn+qnorm(0.975)*sqrt(var_mu))	
+IC_sigma<-c(sigma_logn-qnorm(0.975)*sqrt(var_sigma),sigma_logn+qnorm(0.975)*sqrt(var_sigma))	
+ic_musigma <- cbind(IC_mu,IC_sigma)
+rownames(ic_musigma) <- c("Inferior", "Superior")
+knitr::kable(ic_musigma, col.names=c("locação", "escala"), caption = "IC 95% dos parâmetros")
+```
+
+## Estimando tempo médio até primeiro uso
+
+```{r}	
+E_Tlog=exp(mu_logn+(sigma_logn^2)/2)	
+E_Tlog	
+```	
+
+
+## Estimando a função de sobrevivência
+
+```{r}	
+S_logn<-function(t){pnorm((-log(t)+mu_logn)/sigma_logn)}	
+plot(S_logn,ylab="S(t)",xlab="t (em meses)",xlim=c(6,22))	
+```
+
+
+## Estimando a função taxa de falha
+
+Espera-se que seja totalmente diferente das outras.
+
+```{r}	
+#criando uma funçao no R para a densidade	
+f_logn<-function(t){(1/(sqrt(2*pi)*t*sigma_logn))*exp(-0.5*((log(t)-mu_logn)/sigma_logn)^2)}	
+#criando uma função no R para a taxa de falha 	
+lambda_logn<-function(t){f_logn(t)/S_logn(t)}	
+plot(lambda_logn,ylab=expression(lambda(t)),xlab="t(idade))",xlim=c(6,22))	
+```
+
+Como visto comparado com as outras funções de taxa de falha a log-normal cresce muito mais rápido que as outras.	
+## Estimando percentil da log-normal
+
+```{r}	
+perc_logn<-function(p){exp(qnorm(p)*sigma_logn+mu_logn)}	
+```
+
+## estimando o percentil 5%
+
+```{r}
+quantis_logn <- sapply(c(0.05, 0.08, 0.1),perc_logn)
+```
+
+```{r}	
+perc_logn(p=0.05)	
+```
+
+## estimando o percentil 8%
+
+```{r}	
+perc_logn(p=0.08)	
+```
+
+## estimando o percentil 10%
+
+```{r}	
+perc_logn(p=0.1)	
+```	
+
+Estima-se que:
+
+- Aos 13.68 anos de idade, 5% dos alunos terão experimentado algum tipo de droga;
+
+- Aos 14.41 anos de idade, 8% dos alunos terão experimentado algum tipo de droga, e
+
+- Aos 14.80 anos de idade, 10% dos alunos terão experimentado algum tipo de droga.
+
+## plotando o percentil versus p
+
+```{r}	
+plot(perc_logn,ylab="tp (idade)",xlab="p")	
+```
+
+## Comparativo
+
+
+## Comparando algumas medidas 
+
+| Quantidades de interesse |                           | Exponencial                      | Weibull                             | Log-Normal                          |
+| :----------------------: | :-----------------------: | :------------------------------: | :---------------------------------: | :---------------------------------: |
+| Esperança estimada            |                           | 164\.0761                        | 17\.59                              | 19\.9874                            |
+| Taxa de falha em t    | t=9 <br>  t=12 <br>  t=15 | 0\.006  <br>  0.006 <br>  0.006  | 0\.0007  <br>  0.0103  <br>  0.0811 | 0\.0003  <br>  0.0123  <br>  0.0657 |
+| Percentil p         | t=9 <br>  t=12 <br>  t=15 | 8\.416 <br>  13.680 <br>  17.287 | 13\.811 <br>  14.5 <br>  14.82      | 13\.683 <br>  14.411 <br>  14.8     |
+| Função de Sobrevivência em t          | t=9 <br>  t=12 <br>  t=15 | 0\.946 <br>  0.929 <br>  0.912   | 0\.999 <br>  0.987 <br>  0.88       | 0\.999 <br>  0.987 <br>  0.88       |
+
+
+# Densidades
+
+```{r}	
+#função densidade da Exponencial
+f_exp<-function(t){(1/alfa_exp)*exp(-t/alfa_exp)}	
+
+#função densidade da Weibull	
+f_wei<-function(t){(gama_wei/alfa_wei^gama_wei)*t^(gama_wei-1)*exp(-	
+(t/alfa_wei)^gama_wei)}
+
+#função densidade log-normal	
+f_logn<-function(t){(1/(sqrt(2*pi)*t*sigma_logn))*exp(-0.5*((log(t)-mu_logn)/sigma_logn)^2)}	
+plot(f_exp,type="l",col=4,ylab="probabilidade",xlab="t (idade)",xlim=c(6,30),ylim=c(0,0.22))		
+t=seq(0,80,0.01)		
+lines(t,f_wei(t),type="l",col=6)		
+lines(t,f_logn(t),type="l",col=9)		
+Legenda<-c(expression(Exponencial),expression(Weibull),expression(Log-normal))		
+legend("topright", Legenda,lwd=c(1,1,1),cex=1.2,inset=0.00,col=c(4,6,9),bty="n")		
+```		
+
+# Taxa de falha
+
+```{r}		
+#Função de taxa de falha:		
+plot(lambda_exp,type="l",col=4,ylab=expression(lambda(t)),xlab="t",xlim=c(6,22),ylim=c(0,1))		
+#plotando as funções		
+t=seq(0,80,0.01)		
+lines(t,lambda_wei(t),type="l",col=6)		
+lines(t,lambda_logn(t),type="l",col=9)		
+Legenda<-c(expression(Exponencial),expression(Weibull),expression(Log-normal))		
+legend("topright", Legenda,lwd=c(1,1,1),cex=1.2,inset=0.00,col=c(4,6,9),bty="n")		
+```
+
+## Funções de sobrevivência
+
+```{r}	
+#Função de sobrevivência:	
+plot(S_exp,type="l",col=4,ylab="S(t)",xlab="t",xlim=c(0,22))	
+#plotando as funções	
+t=seq(0,80,0.01)	
+lines(t,S_wei(t),type="l",col=6)	
+lines(t,S_logn(t),type="l",col=9)	
+Legenda<-c(expression(Exponencial),expression(Weibull),expression(Log-normal))	
+legend("topright", Legenda,lwd=c(1,1,1),cex=1.2,inset=0.00,col=c(4,6,9),bty="n")	
+```	
+
+# TRV
+
+Analisamos as estimativas comparando cada uma das distribuições utilizadas, mas qual modelo probabilístico devemos escolher? Iremos fazer o teste de razão de verossimilhança para encontrar quais modelos são adequados.
+
+## Máximos da log-verossimilhança
+
+```{r}
+f_exp <- ajuste_exp$loglik[2]
+f_wei <- ajuste_wei$loglik[2]
+f_log <- ajuste_logn$loglik[2]
+ajuste_gamg<-flexsurvreg(Surv(tempo,censura)~1,dist="gengamma")
+f_gamg <- ajuste_gamg$loglik
+
+df <- as.data.frame(rbind(f_exp, f_wei, f_log, f_gamg))
+row.names(df) <- c("Exponencial", "Weibull", "Log-Normal", "Gama Generalizada")
+names(df) <- c("Estimativa")
+df %>% 
+  kable(caption = "Máximo da log-verossimilhança") %>%
+  kable_styling(full_width=F)
+```
+
+## Estatísticas TRV e p-valores
+
+```{r}
+TRV_exp=2*(ajuste_gamg$loglik-ajuste_exp$loglik[2])
+TRV_wei=2*(ajuste_gamg$loglik-ajuste_wei$loglik[2])
+TRV_logn=2*(ajuste_gamg$loglik-ajuste_logn$loglik[2])
+
+p_valores <- c(1-pchisq(TRV_exp,df=2), 1-pchisq(TRV_wei,df=1), 1-pchisq(TRV_logn,df=1))
+
+df <- as.data.frame(cbind(rbind(TRV_exp, TRV_wei, TRV_logn), p_valores))
+row.names(df) <- c("Exponencial", "Weibull", "Log-Normal")
+names(df) <- c("Estatística", "P-valor")
+df %>% 
+  kable(caption = "Teste da razão de verossimilhanças") %>%
+  kable_styling(full_width=F)
+```
+
+Pelo TRV, Ao nível de 5% de significância apenas o modelo da distribuição Weibull não rejeita a hipótese nula, ou seja, é adequado aos dados.
+
+
+# Estimação não paramétrica
+
+Podemos também usar estimação paramétrica para encontrar a função de sobrevivência. Esta forma de estimar é especialmente útil para dados censurados à direita.
+
+## Kaplan-Meier
+
+### ICs normais para as estimativas de Kaplan-Meier de S(t)
+
+Interavalo obtido é simétrico em relação a função de sobrevivência.
+
+```{r}
+ekm<-survfit(Surv(tempo,censura)~1, conf.type="plain")
+summary(ekm)
+```
+
+```{r}
+plot(ekm,xlab="Tempo",ylab="S(t) Kaplan-Meier",conf.int=T)
+```
+
+### ICs normais com transformação log[−log(S(t))] para S(t)
+
+```{r}
+ekm<-survfit(Surv(tempo,censura)~1, conf.type="log-log")
+summary(ekm)
+```
+
+```{r}
+plot(ekm,xlab="Tempo",ylab="S(t) Kaplan-Meier",conf.int=T)
+```
+
+## Nelson-Aalen
+
+### Estimação de S(t) por Nelson-Aalen
+
+```{r}
+ss<-survfit(coxph(Surv(tempo,censura)~1,method="breslow"))
+summary(ss)
+```
+
+```{r}
+racum <- -log(ss$surv)
+racum
+```
+
+```{r}
+plot(ss)
+```
+
+## Comparando K-P e N-A
+
+```{r}
+plot(ekm,xlab="Tempo",ylab="S(t) estimada",conf.int=F,col=4)
+lines(ss,conf.int=F,col=6)
+Legenda<-c("Kaplan-Meier","Nelson-Aalen")
+legend("bottomright", Legenda,lwd=c(1,1),cex=1.2,inset=0.00,col=c(4,6),bty="n")
+```
+
+
+Podemos observar que as estimativas para a função de sobrevivência são bem parecidas usando os dois métodos.
+
+## Log-rank para sexo
+
+Iremos comparar a função de sobrevivência entre dois grupos: sexo masculino(1) e sexo feminino(2).
+
+```{r}
+tam_masc <- length(drogas[drogas$sexo==1,]$sexo)
+tam_fem <- length(drogas[drogas$sexo==2,]$sexo)
+grupos<-c(rep(1, tam_masc), rep(2, tam_fem))
+```
+
+### Estimação de S(t) por Kaplan-Meier
+
+```{r}
+ekm<-survfit(Surv(tempo,censura)~grupos)
+summary(ekm)
+```
+```{r}
+plot(ekm,lty=c(1, 2),xlab="Tempo",ylab="S(t) Kaplan-Meier",lwd=2)
+legend(1,0.3,lty=c(1, 2),c("Grupo 1","Grupo 2"),lwd=2,bty="n")
+```
+
+## Comparando as curvas de sobrevivência pelo teste de Logrank
+
+### Teste Logrank
+
+```{r}
+survdiff(Surv(tempo,censura)~grupos,rho=0)
+```
+
+O teste de logrank tem estatística de teste igual a 6, e valor-p 0,01. Logo, ao nível de 5% de significância rejeitamos a hipótese nula de igualdade entre as curvas de sobrevivência.
+
+Como só temos os dois grupos, podemos verificar que as diferenças entre eles são significativas. Há de se notar também que o número de observações entre os grupos também está razoavelmente balanceada.
+

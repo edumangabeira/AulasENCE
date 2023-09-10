@@ -1,0 +1,855 @@
+---
+title: "Projeto 1 - Análise de sobrevivência"
+author: "Eduardo Freire, Julio Magalhães"
+date: "14/09/2022"
+output:   
+  rmdformats::downcute:
+    self_contained: True
+    code_folding: hide
+header-includes: 
+  \usepackage{dcolumn}
+  \usepackage{placeins}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = F, warning = F)
+set.seed(202010)
+```
+
+## Introdução
+
+No trabalho presente analisamos o consumo de drogas por estudantes do ensino fundamental em escolas públicas da cidade do Rio de Janeiro, mais especificamente o tempo até um estudante do 9º ano experimentar uma droga pela primeira vez, um problema que envolve dados censurados e o tempo até o evento "estudante consumir droga" ocorrer. O cenário descrito leva a crer que uma análise de sobrevivência é adequada para compreender com mais detalhes a situação nessas escolas.
+
+## Descrição dos dados
+
+```{r}
+library(cowplot)
+require(survival)
+require(flexsurv)
+library(readr)
+library(dplyr)
+library(kableExtra)
+library(ggplot2)
+```
+
+```{r}
+drogas <- read_csv("Drogas-RJ.csv")
+names(drogas) <- c("tempo", "censura", "sexo", "cor", "mora_com_mae", "tempo_livre_pais_cientes", "alcool", "cigarro", "pais_fumantes", "freq_solidao", "amigos_usuarios")
+
+
+drogas <- drogas %>% 
+  filter(alcool != 99) %>% 
+  filter(mora_com_mae !=99) %>% 
+  filter(cor != 99) %>% 
+  filter(cigarro != 99) %>% 
+  filter(tempo_livre_pais_cientes != 99) %>%
+  filter(pais_fumantes != 99) %>%
+  filter(freq_solidao != 99) %>%
+  filter(amigos_usuarios != 99) 
+  
+
+tempo <- drogas$tempo
+censura <- drogas$censura
+surv_obj <- Surv(tempo, censura)
+```
+
+```{r}
+head(drogas) %>% 
+kable(caption = "Primeiras observações do dataset") %>%
+  kable_styling(full_width=F)
+```
+
+Os dados são provenientes da Pesquisa Nacional de Saúde do Escolar
+(PeNSE) de 2015, conduzida pelo IBGE(ou seja, um questionário), e se referem ao tempo até a experimentação de drogas ilícitas em uma amostra de estudantes do 9º ano do ensino fundamental de escolas públicas da cidade do Rio de Janeiro.
+
+
+- tempo – Tempo até o primeiro uso de drogas - como: maconha, cocaína, crack, loló, lançaperfume, ecstasy, oxy, etc (variável resposta)
+
+- censura – Indicador de censura (0=censura e 1=falha)
+
+As demais variáveis se referem às seguintes perguntas feitas na pesquisa:
+
+- sexo – Qual é o seu sexo? (1=Masculino e 2=Feminino)
+
+- cor – Qual é a sua cor ou raça? (1=Branca, 2=Preta, 3=Amarela, 4=Parda, 5=Indígena,
+99=Não informado)
+
+- mora_com_mae – Você mora com sua mãe? (1=Sim, 2=Não, 99=Não informado)
+
+- tempo_livre_pais_cientes – NOS ÚLTIMOS 30 DIAS, com que frequência seus pais ou responsáveis sabiam
+realmente o que você estava fazendo em seu tempo livre? (1=Nunca, 2=Raramente, 3=Às
+vezes, 4=Na maior parte do tempo, 5=Sempre, 99=Não informado)
+
+- alcool - Alguma vez na vida você tomou uma dose de bebida alcoólica? (Uma dose equivale a
+uma lata de cerveja ou uma taça de vinho ou uma dose de cachaça ou uísque etc) (1=Sim, 2=Não,
+99=Não informado)
+
+- cigarro – Alguma vez na vida, você já fumou cigarro, mesmo uma ou duas tragadas? (1=Sim,
+2=Não, 99=Não informado)
+
+- pais_fumantes – Algum de seus pais ou responsáveis fuma? (1=Nenhum deles, 2=Só meu pai ou
+responsável do sexo masculino, 3=Só minha mãe ou responsável do sexo feminino, 4=Meu pai e
+minha mãe ou responsáveis, 5=Não sei, 99=Não informado)
+
+- freq_solidao – NOS ÚLTIMOS 12 MESES com que frequência tem se sentido sozinho(a)? (1=Nunca,
+2=Raramente, 3=Às vezes, 4=Na maioria das vezes, 5=Sempre, 99=Não informado)
+
+- amigos_usuários – Quantos amigos seus usam drogas? (1=Nenhum, 2=Poucos, 3=Alguns, 4=A maioria,
+5=Todos, 6=Não sei, 99=Não informado)
+
+O arquivo contém algumas variáveis selecionadas dos microdados originais (que podem ser encontrados
+em https://www.ibge.gov.br/estatisticas/sociais/educacao/9134-pesquisa-nacional-de-saude-doescolar.html?=&t=microdados).
+
+
+# Análise de sobrevivência
+
+Daqui em diante iremos apresentar estimativas não paramétricas para a curva de sobrevivência. Iremos também analisar as covariáveis e procurar diferenças entre grupos.
+
+## Kaplan-Meier
+
+### ICs normais para as estimativas de Kaplan-Meier de S(t)
+
+Interavalo obtido é simétrico em relação a função de sobrevivência.
+
+```{r}
+ekm <- survfit(surv_obj~1, conf.type="plain")
+summary(ekm)
+```
+
+```{r}
+plot(ekm,xlab="Tempo",ylab="S(t) Kaplan-Meier",conf.int=T)
+```
+
+### ICs normais com transformação log[−log(S(t))] para S(t)
+
+```{r}
+ekm<-survfit(surv_obj~1, conf.type="log-log")
+summary(ekm)
+```
+
+```{r}
+plot(ekm,xlab="Tempo",ylab="S(t) Kaplan-Meier",conf.int=T)
+```
+
+## Nelson-Aalen
+
+### Estimação de S(t) por Nelson-Aalen
+
+```{r}
+ss<-survfit(coxph(surv_obj~1,method="breslow"))
+summary(ss)
+```
+
+```{r}
+racum <- -log(ss$surv)
+racum
+```
+
+```{r}
+plot(ss)
+```
+
+## Comparando K-P e N-A
+
+```{r}
+plot(ekm,xlab="Tempo",ylab="S(t) estimada",conf.int=F,col=4)
+lines(ss,conf.int=F,col=6)
+Legenda<-c("Kaplan-Meier","Nelson-Aalen")
+legend("bottomright", Legenda,lwd=c(1,1),cex=1.2,inset=0.00,col=c(4,6),bty="n")
+```
+
+
+Podemos observar que as estimativas para a função de sobrevivência são bem parecidas usando os dois métodos.
+
+# Curvas de Kaplan-Meier por covariáveis
+
+## Sexo
+
+Iremos comparar a função de sobrevivência entre dois grupos: sexo masculino(1) e sexo feminino(2).
+
+```{r}
+tam_masc <- length(drogas[drogas$sexo==1,]$sexo)
+tam_fem <- length(drogas[drogas$sexo==2,]$sexo)
+grupos<-c(rep(1, tam_masc), rep(2, tam_fem))
+```
+
+```{r}
+ekm<-survfit(surv_obj~grupos)
+plot(ekm,lty=c(1, 2),xlab="Tempo",ylab="S(t) Kaplan-Meier",lwd=2, col=c(4,6))
+legend(1,0.3,lty=c(1, 2), title = "Sexo",c("Masculino","Feminino"),lwd=2,bty="n", col=c(4,6))
+```
+
+### Resultado do Log-rank
+
+```{r}
+survdiff(surv_obj~grupos,rho=0)
+```
+
+O teste de logrank tem estatística de teste igual a 6, e valor-p 0,01. Logo, ao nível de 5% de significância rejeitamos a hipótese nula de igualdade entre as curvas de sobrevivência.
+
+Como só temos os dois grupos, podemos verificar que as diferenças entre eles são significativas. Há de se notar também que o número de observações entre os grupos também está razoavelmente balanceada.
+
+
+## Você mora com sua mãe?
+
+Iremos comparar a função de sobrevivência entre dois grupos: mora com a mãe(1) e não mora com a mãe(2).
+
+```{r}
+sim <- length(drogas[drogas$mora_com_mae==1,]$mora_com_mae)
+nao <- length(drogas[drogas$mora_com_mae==2,]$mora_com_mae)
+grupos<-c(rep(1, sim), rep(2, nao))
+```
+
+```{r}
+ekm <- survfit(surv_obj~grupos)
+plot(ekm,lty=c(1, 2),xlab="Tempo",ylab="S(t) Kaplan-Meier",lwd=2, col=c(4,6))
+legend(1,0.3,lty=c(1, 2),title = "Mora com mãe",c("Sim","Não"),lwd=2,bty="n", col=c(4,6))
+```
+
+### Resultado do Log-rank
+
+```{r}
+survdiff(surv_obj~grupos,rho=0)
+```
+
+Como o p-valor é igual a 0.6, ao nível de 5% de significância não há evidências para rejeitarmos a hipótese nula de igualdade entre as curvas de sobrevivência.
+
+
+## Alguma vez na vida você tomou uma dose de bebida alcoólica? 
+
+Iremos comparar a função de sobrevivência entre dois grupos: já consumiu álcool(1) e não consumiu álcool(2).
+
+```{r}
+sim <- length(drogas[drogas$alcool==1,]$alcool)
+nao <- length(drogas[drogas$alcool==2,]$alcool)
+grupos<-c(rep(1, sim), rep(2, nao))
+```
+
+```{r}
+ekm <- survfit(surv_obj~grupos)
+plot(ekm,lty=c(1, 2),xlab="Tempo",ylab="S(t) Kaplan-Meier",lwd=2, col=c(4,6))
+legend(1,0.3,lty=c(1, 2),title = "Já consumiu álcool",c("Sim","Não"),lwd=2,bty="n", col=c(4,6))
+```
+
+
+### Resultado do Log-rank
+
+```{r}
+survdiff(surv_obj~grupos,rho=0)
+```
+
+
+Como o p-valor é igual a 0.3, ao nível de 5% de significância não há evidências para rejeitarmos a hipótese nula de igualdade entre as curvas de sobrevivência.
+
+
+## Alguma vez na vida, você já fumou cigarro, mesmo uma ou duas tragadas?
+
+ (1=Sim, 2=Não, 99=Não informado)
+
+
+```{r}
+sim <- length(drogas[drogas$cigarro==1,]$cigarro)
+nao <- length(drogas[drogas$cigarro==2,]$cigarro)
+grupos<-c(rep(1, sim), rep(2, nao))
+```
+
+```{r}
+ekm <- survfit(surv_obj~grupos)
+plot(ekm,lty=c(1, 2),xlab="Tempo",ylab="S(t) Kaplan-Meier",lwd=2, col=c(4,6))
+legend(1,0.3,lty=c(1, 2),title = "Usou cigarro",c("Sim","Não"),lwd=2,bty="n", col=c(4,6))
+```
+
+### Resultado do Log-rank
+
+```{r}
+survdiff(surv_obj~grupos,rho=0)
+```
+
+Como o p-valor é igual a 0.8, ao nível de 5% de significância não há evidências para rejeitarmos a hipótese nula de igualdade entre as curvas de sobrevivência.
+
+## Algum de seus pais ou responsáveis fuma? 
+
+(1=Nenhum deles, 2=Só meu pai ou responsável do sexo masculino, 3=Só minha mãe ou responsável do sexo feminino, 4=Meu pai e minha mãe ou responsáveis, 5=Não sei)
+
+```{r}
+a <- length(drogas[drogas$pais_fumantes==1,]$pais_fumantes)
+b <- length(drogas[drogas$pais_fumantes==2,]$pais_fumantes)
+c <- length(drogas[drogas$pais_fumantes==3,]$pais_fumantes)
+d <- length(drogas[drogas$pais_fumantes==4,]$pais_fumantes)
+e <- length(drogas[drogas$pais_fumantes==5,]$pais_fumantes)
+grupos<- c(rep(1, a+e), rep(2,b+c+d))
+```
+
+```{r}
+ekm <- survfit(surv_obj~grupos)
+plot(ekm,lty=c(1, 2),xlab="Tempo",ylab="S(t) Kaplan-Meier",lwd=2, col=c(4,6))
+legend(1,0.3,lty=c(1, 2),title = "Responsáveis fumantes",c("Nenhum ou não sabe","Pelo menos um"),lwd=2,bty="n", col=c(4, 6))
+```
+
+Como essa pergunta tem muito a ver com a percepção do jovem sobre o consumo de drogas lícitas por parte dos pais, decidimos dividir as respostas em dois grupos que vão representar bem a intenção da pergunta.
+
+
+### Resultado do Log-rank
+
+```{r}
+survdiff(surv_obj~grupos,rho=0)
+```
+
+Como o p-valor é igual a 0.8, ao nível de 5% de significância não há evidências para rejeitarmos a hipótese nula de igualdade entre as curvas de sobrevivência.
+
+## NOS ÚLTIMOS 30 DIAS, com que frequência seus pais ou responsáveis sabiam realmente o que você estava fazendo em seu tempo livre?
+
+Iremos comparar a função de sobrevivência entre os grupos: (1=Nunca, 2=Raramente, 3=Às
+vezes, 4=Na maior parte do tempo, 5=Sempre, 99=Não informado)
+
+```{r}
+a <- length(drogas[drogas$tempo_livre_pais_cientes==1,]$tempo_livre_pais_cientes)
+b <- length(drogas[drogas$tempo_livre_pais_cientes==2,]$tempo_livre_pais_cientes)
+c <- length(drogas[drogas$tempo_livre_pais_cientes==3,]$tempo_livre_pais_cientes)
+d <- length(drogas[drogas$tempo_livre_pais_cientes==4,]$tempo_livre_pais_cientes)
+e <- length(drogas[drogas$tempo_livre_pais_cientes==5,]$tempo_livre_pais_cientes)
+grupos<-c(rep(1, a+b+c), rep(2, d+e))
+```
+
+```{r}
+ekm <- survfit(surv_obj~grupos)
+plot(ekm,lty=c(1, 2),xlab="Tempo",ylab="S(t) Kaplan-Meier",lwd=2, col=c(4,6))
+legend(1,0.3,lty=c(1, 2),title = "Pais cientes do que filhos fazem no tempo livre",c("Pouco", "Muito"),lwd=2,bty="n", col=c(4,6))
+```
+
+Aqui também fizemos uma divisão considerando o que seriam pais mais próximos ou que tem mais confiança dos filhos.
+
+### Resultado do Log-rank
+
+```{r}
+survdiff(surv_obj~grupos,rho=0)
+```
+
+O teste de logrank tem estatística de teste igual a 6, e valor-p 0.004. Logo, ao nível de 5% de significância rejeitamos a hipótese nula de igualdade entre as curvas de sobrevivência.
+
+Como só temos os dois grupos, podemos verificar que as diferenças entre eles são significativas. É um resultado curioso, pois indica que aparentemente os pais saberem o que os filhos fazem é mais decisivo para o consumo de drogas dos jovens do que os hábitos e vícios dos responsáveis. Os pais que estão mais presentes têm filhos com curvas de sobrevivência mais altas.
+
+## Qual é a sua cor ou raça?
+
+Iremos comparar a função de sobrevivência entre os grupos:1=Branca, 2=Preta, 3=Amarela, 4=Parda, 5=Indígena,
+99=Não informado
+.
+
+```{r}
+a <- length(drogas[drogas$cor==1,]$cor)
+b <- length(drogas[drogas$cor==2,]$cor)
+c <- length(drogas[drogas$cor==3,]$cor)
+d <- length(drogas[drogas$cor==4,]$cor)
+e <- length(drogas[drogas$cor==5,]$cor)
+grupos<-c(rep(1, a), rep(2, b+d),rep(3, c+e))
+```
+
+```{r}
+ekm <- survfit(surv_obj~grupos)
+plot(ekm,lty=c(1, 2, 3),xlab="Tempo",ylab="S(t) Kaplan-Meier",lwd=2, col=c(4,6,8))
+legend(1,0.3,lty=c(1, 2, 3),title = "Cor ou raça",c("Branca", "Pretos e pardos", "Outros"),lwd=2,bty="n", col=c(4,6, 8))
+```
+
+### Resultado do Log-rank
+
+```{r}
+survdiff(surv_obj~grupos,rho=0)
+```
+
+No teste Log-Rank encontramos um p-valor de 0.01, ou seja, rejeitamos a hipótese nula de que há igualdade entre os grupos. Agora é preciso descobrir entre quais grupos há diferença. Pelo gráfico pode se levantar a suspeita que a diferença esteja entre pretos e pardos e os outros dois grupos. Fazendo as comparações dois a dois temos:
+
+#### Brancos vs Pretos e pardos
+
+```{r}
+subset_cor <- function(cor_raca){
+  return (drogas %>% filter(cor %in% cor_raca))
+}
+
+drogas_b <- subset_cor(c(1))
+drogas_pp <- subset_cor(c(2,4))
+drogas_o <- subset_cor(c(3,5))
+
+grupos_b_pp<-c(rep(1, length(drogas_b$cor)), rep(2, length(drogas_pp$cor)))
+tempo_b_pp <- c(drogas_b$tempo, drogas_pp$tempo)
+censura_b_pp <- c(drogas_b$censura, drogas_pp$censura)
+surv_b_pp <- Surv(tempo_b_pp, censura_b_pp)
+survdiff(surv_b_pp~grupos_b_pp,rho=0)
+```
+
+
+#### Brancos vs outros
+
+```{r}
+grupos_b_o<-c(rep(1, length(drogas_b$cor)), rep(2, length(drogas_o$cor)))
+tempo_b_o <- c(drogas_b$tempo, drogas_o$tempo)
+censura_b_o <- c(drogas_b$censura, drogas_o$censura)
+surv_b_o <- Surv(tempo_b_o, censura_b_o)
+survdiff(surv_b_o~grupos_b_o,rho=0)
+```
+
+#### Pretos e pardos vs outros
+
+```{r}
+grupos_o_pp<-c(rep(1, length(drogas_o$cor)), rep(2, length(drogas_pp$cor)))
+tempo_o_pp <- c(drogas_o$tempo, drogas_pp$tempo)
+censura_o_pp <- c(drogas_o$censura, drogas_pp$censura)
+surv_o_pp <- Surv(tempo_o_pp, censura_o_pp)
+survdiff(surv_o_pp~grupos_o_pp,rho=0)
+```
+
+
+O resultado final foi bem esquisito, pois em todos os testes a diferença não foi significativa ao nível de 5%, mesmo encontrando uma diferença entre os grupos no teste inicial.
+
+## NOS ÚLTIMOS 12 MESES com que frequência tem se sentido sozinho(a)?
+
+(1=Nunca,
+2=Raramente, 3=Às vezes, 4=Na maioria das vezes, 5=Sempre, 99=Não informado)
+
+```{r}
+a <- length(drogas[drogas$freq_solidao==1,]$freq_solidao)
+b <- length(drogas[drogas$freq_solidao==2,]$freq_solidao)
+c <- length(drogas[drogas$freq_solidao==3,]$freq_solidao)
+d <- length(drogas[drogas$freq_solidao==4,]$freq_solidao)
+e <- length(drogas[drogas$freq_solidao==5,]$freq_solidao)
+grupos<-c(rep(1, d+e), rep(2, a+b+c))
+```
+
+```{r}
+ekm <- survfit(surv_obj~grupos)
+plot(ekm,lty=c(1, 2),xlab="Tempo",ylab="S(t) Kaplan-Meier",lwd=2, col=c(4,6))
+legend(1,0.3,lty=c(1, 2),title = "Frequência de solidão",c("Frequente","pouco frequente"),lwd=2,bty="n", col=c(4,6))
+```
+
+### Resultado do Log-rank
+
+```{r}
+survdiff(surv_obj~grupos,rho=0)
+```
+
+
+Como o p-valor é igual a 0.7, ao nível de 5% de significância não há evidências para rejeitarmos a hipótese nula de igualdade entre as curvas de sobrevivência.
+
+## Quantos amigos seus usam drogas? 
+
+(1=Nenhum, 2=Poucos, 3=Alguns, 4=A maioria, 5=Todos, 6=Não sei, 99=Não informado)
+
+```{r}
+a <- length(drogas[drogas$amigos_usuarios==1,]$amigos_usuarios)
+b <- length(drogas[drogas$amigos_usuarios==2,]$amigos_usuarios)
+c <- length(drogas[drogas$amigos_usuarios==3,]$amigos_usuarios)
+d <- length(drogas[drogas$amigos_usuarios==4,]$amigos_usuarios)
+e <- length(drogas[drogas$amigos_usuarios==5,]$amigos_usuarios)
+f <- length(drogas[drogas$amigos_usuarios==6,]$amigos_usuarios)
+grupos<-c(rep(1, a+f), rep(2, b+c), rep(3, d+e))
+```
+
+```{r}
+ekm <- survfit(surv_obj~grupos)
+plot(ekm,lty=c(1, 2, 3),xlab="Tempo",ylab="S(t) Kaplan-Meier",lwd=2, col=c(4,6, 8))
+legend(1,0.3,lty=c(1, 2, 3),title = "Amigos usuários de drogas",c("Nenhum ou Não sei","Poucos", "Muitos"),lwd=2,bty="n", col=c(4,6, 8))
+```
+
+Aqui adotamos um critério parecido com a variável de pais cientes do que os filhos fazem, e também dividimos em 3 grupos como cor e raça.
+
+
+### Resultado do Log-rank
+
+```{r}
+survdiff(surv_obj~grupos,rho=0)
+```
+
+
+Como o p-valor é igual a 0.5, ao nível de 5% de significância não há evidências para rejeitarmos a hipótese nula de igualdade entre as curvas de sobrevivência.
+
+# Modelos de Regressão paramétricos
+
+
+No projeto anterior, encontramos pelo TRV que a distribuição que melhor se adequa aos dados é a Weibull. Num modelo de regressão paramétrico para dados com censura, pode ser que encontremos um resultado distinto, pois iremos agora considerar as covariáveis.
+
+## Escolha das variáveis
+
+O procedimento para selecionar as variáveis é o mesmo descrito no livro do Colosimo. Iremos ajustar alguns modelos iniciais que consideram covariáveis sozinhas. Também iremos usar a distribuição Gama generalizada para realizar os ajustes iniciais.
+
+Os critérios adotados para one-hot encoding foram:
+
+Para cor ou raça:
+
+$$
+I(x) = \begin{cases}
+            1, x = \text{branco} \\
+            0, x = \text{demais raças}
+
+\end{cases}
+$$
+
+Para pais cientes e frequência de solidão:
+
+
+$$ I(x) = \begin{cases}
+            1, x = \text{sempre ou quase sempre} \\
+            0, x = \text{demais categorias}
+
+\end{cases} $$
+
+
+Para amigos usuários:
+
+
+$$ I(x) = \begin{cases}
+            1, x = \text{todos ou quase todos} \\
+            0, x = \text{demais categorias}
+
+\end{cases} $$
+
+```{r}
+drogas <- drogas %>%
+  mutate(tempo_livre_pais_cientes = ifelse(tempo_livre_pais_cientes %in% c(4,5) , 1, 0)) %>% 
+  mutate(cor = ifelse(cor == 1 , 1, 0)) %>% 
+  mutate(sexo = ifelse(sexo == 1 , 1, 0)) %>% 
+  mutate(alcool = ifelse(alcool == 1 , 1, 0)) %>%
+  mutate(cigarro = ifelse(cigarro == 1 , 1, 0)) %>%
+  mutate(mora_com_mae = ifelse(mora_com_mae == 1 , 1, 0)) %>% 
+  mutate(freq_solidao = ifelse(freq_solidao %in% c(4,5), 1, 0)) %>%
+  mutate(amigos_usuarios = ifelse(amigos_usuarios %in% c(4,5), 1, 0)) %>% 
+  mutate(pais_fumantes = ifelse(pais_fumantes %in% c(2, 3 ,4), 1, 0))
+
+```
+
+O modelo teórico com todas as covariáveis é dado por:
+
+$$ Y = log(T) = \beta_0 + \beta_1 x_1+ \beta_2 x_2 + ... + \beta_9 x_9 +\sigma\nu $$
+
+onde, *x1: "tempo livre, pais cientes", x2: "cor ou raça", x3: "sexo", x4: "consumo de álcool", x5: "uso de cigarro", x6: "frequência de solidão", x7: "amigos usuários", "x8: mora com a mãe", "pais fumantes"*.
+
+### passo 1
+
+Ajustar todos os modelos contendo uma única covariável. Incluir todas as covariáveis que forem significativas ao nível de 0,1. É aconselhável utilizar o teste da razão de verossimilhanças neste passo.
+
+$$
+H_0: \text{O modelo nulo(+simples) é adequado} \iff \  \beta_i = 0 \\
+
+H_1: \beta_i \neq0
+$$
+```{r}
+build_models <- function(covariaveis){
+  return(lapply(covariaveis, function(x){
+                    flexsurvreg(surv_obj ~ eval(parse(text=x)),
+                    dist = "gengamma", data = drogas, method = "Nelder-Mead")
+                    }
+                    ))
+}
+
+show_p_values <- function(modelos, texto_covariaveis){
+  m0 <- flexsurvreg(surv_obj ~ 1, dist = "gengamma", data = drogas)
+  TRVs <- sapply(modelos, function(modelo){modelo$loglik-m0$loglik})
+  p_valores <- sapply(TRVs, function(quantil){1-pchisq(quantil, df=1)})
+  tabela_significancia <- data.frame("Covariáveis"=texto_covariaveis, TRV=p_valores)
+  kable(tabela_significancia, caption = "TRV para cada modelo estimado") %>%
+    kable_styling(full_width = F)
+}
+```
+
+```{r}
+modelos <- build_models(c(
+                "tempo_livre_pais_cientes", 
+                 "cor",
+                 "sexo",
+                 "alcool",
+                 "cigarro",
+                 "freq_solidao",
+                 "amigos_usuarios",
+                 "mora_com_mae",
+                 "pais_fumantes"
+                 ))
+
+```
+
+```{r}
+show_p_values(modelos, c(
+         "x1",
+         "x2",
+         "x3",
+         "x4",
+         "x5",
+         "x6",
+         "x7",
+         "x8",
+         "x9"))
+```
+
+Pela tabela podemos ver que apenas os modelos que só incluem consumo de cigarro e álcool deve ser mantidos.
+
+### passo 2
+
+As covariáveis significativas no passo 1 são então ajustadas conjuntamente. Na presença de certas covariáveis, outras podem deixar de ser significativas. Consequentemente, ajusta-se modelos reduzidos, excluindo uma única covariável. Verifica-se as  covariáveis que provocam um aumento estatisticamente significativo na estatística da razão de verossimilhanças. Somente aquelas que atingiram a significância permanecem no modelo.
+
+```{r}
+modelos <- build_models(c(
+                "alcool + cigarro"))
+```
+
+```{r}
+show_p_values(modelos, c(
+         "x4 + x5"))
+```
+
+### etapa 3
+
+3. Ajusta-se um novo modelo com as covariáveis retidas no passo 2. Neste passo as
+covariáveis excluídas no passo 2 retornam ao modelo para confirmar que elas não
+são estatisticamente significativas.
+
+Como o modelo retido não teve nenhuma covariável excluída, pulamos para o passo 4.
+
+### etapa 4
+
+4. As eventuais covariáveis significativas no passo 3 são incluídas ao modelo juntamente
+com aquelas do passo 2. Neste passo retorna-se com as covariáveis excluídas no
+passo 1 para confirmar que elas não são estatisticamente significativas.
+
+*x1: "tempo livre, pais cientes", x2: "cor ou raça", x3: "sexo", x4: "consumo de álcool", x5: "uso de cigarro", x6: "frequência de solidão", x7: "amigos usuários", "x8: mora com a mãe", "pais fumantes"*.
+
+```{r}
+modelos <- build_models(c(
+                "tempo_livre_pais_cientes + sexo + freq_solidao",
+                "cor + sexo + freq_solidao",
+                "cor + sexo + freq_solidao + amigos_usuarios",
+                "tempo_livre_pais_cientes + sexo + mora_com_mae",
+                "tempo_livre_pais_cientes + sexo + pais_fumantes",
+                "cor + sexo + pais_fumantes",
+                "amigos_usuarios + mora_com_mae + pais_fumantes"
+                 ))
+```
+
+```{r}
+show_p_values(modelos, c(
+         "x1 + x3 + x6",
+         "x2 + x3 + x6",
+         "x3 + x6 + x7",
+         "x1 + x3 + x8",
+         "x1 + x3 + x9",
+         "x2 + x3 + x9",
+         "x7 + x8 + x9"
+         ))
+```
+
+Nenhuma combinação das covariáveis removidas no passo 1 foi significativa.
+
+### etapa 5
+
+5. Ajusta-se um modelo incluindo as covariáveis significativas no passo 4. Neste passo
+é testado se alguma delas pode ser retirada do modelo.
+
+Como só duas covariáveis foram significativas, persistimos com elas
+
+### etapa 6
+
+6. Utilizando as covariáveis que sobreviveram ao passo 5 ajusta-se o modelo final para
+os efeitos principais. Para completar a modelagem deve-se verificar a possibilidade
+de inclusão de termos de interação. Testa-se cada uma das interações duas a duas
+possíveis entre as covariáveis incluídas no modelo. O modelo final fica determinado
+pelos efeitos principais identificados no passo 5 e os termos de interação significativos
+identificados neste passo.
+
+```{r}
+modelos <- build_models(c(
+                "alcool + cigarro + alcool*cigarro" 
+                 ))
+```
+
+```{r}
+show_p_values(modelos, c(
+         "x4 + x5 + x4*x5"
+         ))
+```
+
+
+## Testando outras distribuições associadas
+
+No último trabalho a distribuição weibull era a que melhor se adequava aos dados.
+
+```{r}
+modelo <- survreg(surv_obj ~ alcool + cigarro,
+                    dist = "weibull", data = drogas)
+m_exp <- survreg(surv_obj ~ alcool + cigarro + alcool*cigarro,
+                          dist = "exponential", data = drogas)
+m_lnorm <- flexsurvreg(surv_obj ~ alcool + cigarro + alcool*cigarro,
+                          dist = "lnorm", data = drogas)
+m_wei <- survreg(surv_obj ~ alcool + cigarro + alcool*cigarro,
+                          dist = "weibull", data = drogas)
+m_log <- survreg(surv_obj ~ alcool + cigarro + alcool*cigarro,
+                          dist = "logistic", data = drogas)
+ 
+
+distribuicoes <- c("Exponencial", "Log-Normal", "Weibull", "Logístico")
+TRVs <- c(2*(modelo$loglik - m_exp$loglik[1]), 
+          2*(modelo$loglik - m_lnorm$loglik), 
+          2*(modelo$loglik - m_wei$loglik[2]),
+          2*(modelo$loglik - m_log$loglik[2])
+        )
+p_valores <- sapply(TRVs, function(quantil){1-pchisq(quantil, df=1)})
+tabela_significancia <- data.frame("Covariáveis"=distribuicoes, TRV=p_valores)
+kable(tabela_significancia, caption = "TRV para cada modelo estimado") %>%
+kable_styling(full_width = F)
+```
+
+Escolhemos o Weibull por já termos usado antes para avaliar a qualidade do ajuste e por ter passado no TRV como um modelo mais simples e adequado.
+
+### Modelo com interação
+
+No modelo com interação, a interação não é significativa.
+
+```{r}
+modelo_interacao <- survreg(surv_obj ~ alcool + cigarro + alcool*cigarro,
+                    dist = "weibull", data = drogas)
+summary(modelo_interacao)
+```
+
+## Modelo selecionado
+
+
+No modelo selecionado todas as covariáveis são significativas:
+
+$$ Y = log(T) = 3.1708 -0.1713 x_4 -0.2391 x_5 $$
+
+```{r}
+summary(modelo)
+```
+
+## Análise dos resíduos
+
+Observaremos os resíduos de Cox-Snell para verificar a qualidade do ajuste, que deve ser próximo de uma distribuição exponencial(1).
+
+```{r}
+
+xb <- modelo$linear.predictors
+sigma <- modelo$scale
+gama_wei <- 1/modelo$scale
+ei <- (drogas$tempo*exp(-xb))^gama_wei
+
+ekm_erro <- survfit(Surv(ei, drogas$censura) ~ 1)
+t <- ekm_erro$time
+st <- ekm_erro$surv
+sexp <- exp(-t)
+
+
+df1 <- data.frame(st, sexp)
+ggplot(df1, aes(x = st, y = sexp)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, color = "#ff6257", size = 0.9) +
+  labs(title = ("Resíduos de Cox-Snell"),
+       y = "Exponencial(1)",
+       x = "Kaplan-Meier")
+
+```
+
+
+```{r}
+plot(ekm_erro, conf.int=F, mark.time=F,
+     xlab="Resíduos de Cox-Snell",
+     ylab="Sobrevivência estimada")
+lines(t, sexp, lty = 4)
+legend("bottomleft",
+       lty=c(1,4),
+       c("Kaplan-Meier","Exponencial(1)"),
+       cex = 0.8,
+       bty = "n")
+
+```
+
+## Interpretação dos coeficientes
+
+No modelo escolhido podemos interpretar que:
+
+1. Como o coeficiente encontrado foi $e^{-0.1713}=0.842$, os jovens que já experimentaram álcool ao menos uma vez têm o tempo mediano até o primeiro uso de alguma droga ilícita $15.8$% maior em comparação aos que nunca experimentaram.
+
+2. Como o coeficiente encontrado foi $e^{-0.2391} = 0.787$, os jovens que já experimentaram cigarro ao menos uma vez têm o tempo mediano até o primeiro uso de alguma droga ilícita $21.3$% maior em comparação aos que nunca experimentaram.
+
+## Curvas de sobrevivência
+
+### já beberam/nunca beberam vs já fumaram
+
+```{r}
+b0 <- modelo$coefficients[1]
+b_alcool <- modelo$coefficients[2]
+b_cigarro <- modelo$coefficients[3]
+sigma <- modelo$scale
+tempo <- c(0:22)
+
+s1 <- exp( -(tempo/(exp(b0 + b_alcool*1 + b_cigarro*1)))^(1/sigma) )
+s2 <- exp( -(tempo/(exp(b0 + b_alcool*0 + b_cigarro*1)))^(1/sigma) )
+
+plot(s1, tempo*0, pch = " ", ylim = range(c(0,1)),
+     xlim = range(c(0,20)),
+     xlab = "Idade (anos)",
+     ylab = "S(t)",
+     bty= "n",
+     main= "Já fumou ao menos uma vez")
+lines(tempo,s1, lty=1)
+lines(tempo,s2, lty=2)
+legend("bottomleft", lty=c(1,2), c("Já bebeu álcool", "Nunca bebeu álcool"), lwd = 1, bty = "n", cex = 0.8)
+```
+### já fumaram/nunca fumaram vs nunca beberam
+
+```{r}
+b0 <- modelo$coefficients[1]
+b_alcool <- modelo$coefficients[2]
+b_cigarro <- modelo$coefficients[3]
+sigma <- modelo$scale
+tempo <- c(0:22)
+
+s1 <- exp( -(tempo/(exp(b0 + b_alcool*0 + b_cigarro*1)))^(1/sigma) )
+s2 <- exp( -(tempo/(exp(b0 + b_alcool*0 + b_cigarro*0)))^(1/sigma) )
+
+plot(s1, tempo*0, pch = " ", ylim = range(c(0,1)),
+     xlim = range(c(0,20)),
+     xlab = "Idade (anos)",
+     ylab = "S(t)",
+     bty= "n",
+     main= "Nunca experimentou álcool")
+lines(tempo,s1, lty=1)
+lines(tempo,s2, lty=2)
+legend("bottomleft", lty=c(1,2), c("Já fumou", "Nunca fumou"), lwd = 1, bty = "n", cex = 0.8)
+```
+
+## Taxa de falha
+
+
+### já beberam/nunca beberam vs nunca fumaram
+
+```{r}
+b0 <- modelo$coefficients[1]
+b_alcool <- modelo$coefficients[2]
+b_cigarro <- modelo$coefficients[3]
+sigma <- modelo$scale
+tempo <- c(0:22)
+
+r1 <- (1/sigma)/((exp(b0 + b_alcool*1 + b_cigarro*0))^(1/sigma))*tempo^((1/sigma)-1) 
+r2 <- (1/sigma)/((exp(b0 + b_alcool*0 + b_cigarro*0))^(1/sigma))*tempo^((1/sigma)-1) 
+
+plot(r1, tempo*0, pch = " ", ylim = range(c(0,1)),
+     xlim = range(c(0,20)),
+     xlab = "Idade (anos)",
+     ylab = "S(t)",
+     bty= "n",
+     main= "Nunca fumou")
+lines(tempo,r1, lty=1)
+lines(tempo,r2, lty=2)
+legend("topleft", lty=c(1,2), c("Já bebeu álcool", "Nunca bebeu álcool"), lwd = 1, bty = "n", cex = 0.8)
+```
+
+# Predições
+
+
+```{r}
+preditor <- function(x4, x5){exp(b0 + b_alcool*x4 + b_cigarro *x5)[[1]]}
+x4_  <- c(1, 0, 1 ,0)
+x5_ <- c(1, 1, 0, 0)
+estimativas <- mapply(preditor, x4_, x5_)
+categorias <- c("Bebeu e fumou", "Não bebeu e fumou", "Bebeu e não fumou", "Não bebeu e nem fumou")
+tabela_predicoes <- data.frame("Situação"=categorias, "Previsão"=estimativas)
+  kable(tabela_predicoes, caption = "Predições para o tempo em anos até o primeiro uso de drogra ilícita.") %>%
+    kable_styling(full_width = F)
+```
+
+

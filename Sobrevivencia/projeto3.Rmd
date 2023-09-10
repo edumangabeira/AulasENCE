@@ -1,0 +1,303 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, message = F, warning = F)
+```
+
+
+```{r, include=FALSE}
+# Bibliotecas necessárias
+library(survminer)
+library(kableExtra)
+library(gridExtra)
+library(ggplot2)
+library(grid)
+library(dplyr)
+library(survival)
+library(flexsurv)
+library(latex2exp)
+library(patchwork)
+```
+
+
+# Introdução
+A Pesquisa Nacional de Saúde do Escolar (PeNSE) é uma pesquisa feita pelo IBGE que busca munir de informações as autoridades de saúde do país, de modo que seja possível investigar a frequência e a distribuição de fatores de risco para doenças crônicas não transmissíveis, bem como outros temas como a **experimentação e consumo de drogas**, saúde sexual e reprodutiva, percepção da imagem corporal, entre outros. A população alvo dessa pesquisa são escolares que estão frequentando o 9º ano do ensino fundamental.
+
+Os dados utilizados nesse projeto são provenientes da PeNSE de 2015 e se referem ao tempo até a experimentação de bebida alcoólica em uma amostra de estudantes do 9º ano do ensino fundamental da cidade de Recife (PE).
+
+
+## Objetivo
+O objetivo deste projeto é modelar, por meio de técnicas de **Análise de Sobrevivência**, o tempo até a experimentação de bebida alcóolica dos adolescentes que fizeram parte da pesquisa. Dessa forma, é possível obter, por exemplo, o tempo médio até um adolescente experimentar bebida alcóolica, a probabilidade de um adolescente não experimentar bebida alcóolica até uma determinada idade, entre outras estatísticas relevantes para o estudo em questão.
+
+## Base de dados
+A base de dados utilizada contém 2072 observações e 8 variáveis, sendo uma delas o **tempo até a experimentação de bebida alcóolica**, que é a nossa variável de interesse. Abaixo estão as 6 primeiras linhas do *dataset* e as descrições das variáveis.
+
+```{r}
+dados <- read.csv("BebidaAlcoolica.csv")
+head(dados)
+```
+
+- **Tempo:** Tempo até a experimentação de bebida alcóolica *(variável resposta)*
+- **Censura:** Indicador de censura *(0 = censura e 1 = falha)*
+- **VB01001** – Qual é o seu sexo? *(1 = Masculino e 2 = Feminino)*  
+- **VB01002** – Qual é a sua cor ou raça? *(1 = Branca, 2 = Preta, 3 = Amarela, 4 = Parda, 5 = Indígena, 99 = Não informado)*  
+- **VB01006** – Você mora com sua mãe? *(1 = Sim, 2 = Não, 99 = Não informado)*  
+- **VB04001** – Alguma vez na vida, você já fumou cigarro, mesmo uma ou duas tragadas? *(1 = Sim, 2 = Não, 99 = Não informado)*  
+- **VB12001** – Nos últimos 12 anos com que frequência tem se sentido sozinho(a)? *(1 = Nunca, 2 = Raramente, 3 = Às vezes, 4 = Na maioria das vezes, 5 = Sempre, 99 = Não informado)*  
+- **VB06006** – Quantos amigos seus usam drogas? *(1 = Nenhum, 2 = Poucos, 3 = Alguns, 4 = A maioria, 5 = Todos, 6 = Não sei, 99 = Não informado)*
+
+
+## Tratamento de dados
+Abaixo foi feita a renomeação das colunas e a mudança dos tipos de variáveis
+```{r}
+dados1 <- dados %>% 
+  rename(Sexo = VB01001,
+         Raça = VB01002,
+         MorarMae = VB01006,
+         JaFumou = VB04001,
+         Solidao = VB12001,
+         AmigosDroga = VB06006) %>% 
+  mutate(Sexo = ifelse(Sexo == 1, "Masculino", "Feminino"),
+         Raça = ifelse(Raça == 1, "Branca", ifelse(Raça == 2, "Preta", ifelse(Raça == 3, "Amarela", ifelse(Raça == 4, "Parda", ifelse(Raça == 5, "Indígena", "Não informado"))))),
+         MorarMae = ifelse(MorarMae == 1, "Sim", ifelse(MorarMae == 2, "Não", "Não informado")),
+         JaFumou = ifelse(JaFumou == 1, "Sim", ifelse(JaFumou == 2, "Não", "Não informado")),
+         Solidao = ifelse(Solidao == 1, "Nunca", ifelse(Solidao == 2, "Raramente", ifelse(Solidao == 3, "As vezes", ifelse(Solidao == 4, "Maioria das vezes", ifelse(Solidao == 5, "Sempre", "Não informado"))))),
+         AmigosDroga = ifelse(AmigosDroga == 1, "Nenhum", ifelse(AmigosDroga == 2, "Poucos", ifelse(AmigosDroga == 3, "Alguns", ifelse(AmigosDroga == 4, "Maioria", ifelse(AmigosDroga == 5, "Todos", ifelse(AmigosDroga == 6, "Não sei", "Não informado"))))))
+         )
+
+head(dados1)
+```
+
+Nesta parte houve apenas a renomeação do nome das variáveis.
+
+
+
+```{r}
+dados1 %>% 
+  mutate(Solidao = ifelse(Solidao %in% c("Maioria das vezes", "Sempre", "As vezes"),
+                          "Sim",
+                          "Não"),
+         AmigosDroga = ifelse(AmigosDroga %in% c("Todos", "Maioria", "Alguns"),
+                              "Sim",
+                              "Não"),
+         Raça = ifelse(Raça %in% c("Preta", "Parda", "Indígena", "Amarela", "Não Informado"),
+                       "Negra",
+                       "Branca")) -> dados2
+```
+
+Com esse tratamento, mudamos a variável que era a **frequência de solidão** para uma indicadora de **se sente sozinho ou não**. Outra mudança foi a variável **Quantidade de amigos que usam drogas** para **Se tem amigos que usam drogas**. A último alteração foi em relação a **Raça**, onde agrupamos Preta, Parda e Indígena em Negros, como o IBGE geralmente utiliza.
+
+
+# Modelo de Cox - Seleção de variáveis
+
+## Modelo Nulo
+```{r}
+fit0 <- coxph(Surv(Tempo, Censura) ~ 1, x=T, method="breslow", data = dados2)
+summary(fit0)
+
+```
+
+## Modelos com apenas 1 covariável
+
+### Sexo
+```{r}
+fit1 <- coxph(Surv(Tempo, Censura) ~ Sexo, x=T, method="breslow", data = dados2)
+summary(fit1)
+```
+
+### Raça
+```{r}
+fit2 <- coxph(Surv(Tempo, Censura) ~ Raça, x=T, method="breslow", data = dados2)
+summary(fit2)
+```
+
+### Morar ou não com a mãe
+```{r}
+fit3 <- coxph(Surv(Tempo, Censura) ~ MorarMae, x=T, method="breslow", data = dados2)
+summary(fit3)
+```
+
+### Já fumou ou não
+```{r}
+fit4 <- coxph(Surv(Tempo, Censura) ~ JaFumou, x=T, method="breslow", data = dados2)
+summary(fit4)
+```
+
+### Se sentiu sozinho ou não nos últimos 12 meses
+```{r}
+fit5 <- coxph(Surv(Tempo, Censura) ~ Solidao, x=T, method="breslow", data = dados2)
+summary(fit5)
+```
+
+### Tem amigos que usam drogas ou não
+```{r}
+fit6 <- coxph(Surv(Tempo, Censura) ~ AmigosDroga, x=T, method="breslow", data = dados2)
+summary(fit6)
+```
+
+Ao nível de $5\%$ de significância, as variáveis que foram significativas isolodamente foram:
+
+- Se já fumou ou não
+
+- Se se sentiu sozinho nos últimos 12 meses
+
+- Se tem amigos que usam drogas
+
+## Modelo com todas essas variáveis juntas
+```{r}
+fit7 <- coxph(Surv(Tempo, Censura) ~ JaFumou + Solidao + AmigosDroga, x=T, method="breslow", data = dados2)
+summary(fit7)
+```
+Todas as variáveis foram significativas. Abaixo iremos testar se podemos construir modelos mais simples (retirando variáveis) mantendo um bom poder de explicação.
+
+
+Modelo sem a variável indicadora de Solidão:
+```{r}
+fit8 <- coxph(Surv(Tempo, Censura) ~ JaFumou + AmigosDroga, x=T, method="breslow", data = dados2)
+summary(fit8)
+
+```
+
+Modelo sem a variável de AmigosDroga
+```{r}
+fit9 <- coxph(Surv(Tempo, Censura) ~ JaFumou + Solidao, x=T, method="breslow", data = dados2)
+summary(fit9)
+```
+
+Modelo sem a variável JaFumou
+```{r}
+fit10 <- coxph(Surv(Tempo, Censura) ~ AmigosDroga + Solidao, x=T, method="breslow", data = dados2)
+summary(fit10)
+```
+
+
+
+Comparando pelo TRV os modelos:
+```{r}
+# Comparação modelo com TODAS com o modelo com JaFumou e AmigosDroga
+trv1 <- 2*(fit7$loglik[2] - fit8$loglik[2])
+
+# Comparação modelo com TODAS com o modelo com JaFumou e Solidao
+trv2 <- 2*(fit7$loglik[2] - fit9$loglik[2])
+
+# Comparação modelo com TODAS com o modelo com AmigosDroga e Solidao
+trv3 <- 2*(fit7$loglik[2] - fit10$loglik[2])
+
+
+pvalor1 <- 1 - pchisq(trv1, df = 1)
+pvalor2 <- 1 - pchisq(trv2, df = 1)
+pvalor3 <- 1 - pchisq(trv3, df = 1)
+
+
+modelos <- c("JaFumou + AmigosDroga", "JaFumou + Solidao", "Solidao + AmigosDroga")
+p_valores_modelos <- c(pvalor1, pvalor2, pvalor3)
+
+
+tab_final <- tibble("Modelos" = modelos, "P valor" = p_valores_modelos)
+
+
+tab_final %>%
+  kbl() %>%
+  kable_styling(full_width = F)
+```
+
+Em todos os testes houve a rejeição da hipótese nula, mostrando que é melhor ficarmos com o modelo mais completo. Ou seja, ficaremos com o modelo com as 3 variáveis juntas.
+
+
+## Testando a inserção de variáveis novas
+```{r}
+fit11 <- coxph(Surv(Tempo, Censura) ~ JaFumou + Solidao + AmigosDroga + Sexo, x=T, method="breslow", data = dados2)
+summary(fit11)
+```
+
+```{r}
+fit12 <- coxph(Surv(Tempo, Censura) ~ JaFumou + Solidao + AmigosDroga + MorarMae, x=T, method="breslow", data = dados2)
+summary(fit12)
+```
+
+```{r}
+fit13 <- coxph(Surv(Tempo, Censura) ~ JaFumou + Solidao + AmigosDroga + Raça, x=T, method="breslow", data = dados2)
+summary(fit13)
+```
+Nenhuma nova variável foi significativa.
+
+
+## Testanto interações
+```{r}
+fit14 <- coxph(Surv(Tempo, Censura) ~ JaFumou + Solidao + AmigosDroga + JaFumou*Solidao, x=T, method="breslow", data = dados2)
+summary(fit14)
+```
+
+```{r}
+fit15 <- coxph(Surv(Tempo, Censura) ~ JaFumou + Solidao + AmigosDroga + JaFumou*AmigosDroga, x=T, method="breslow", data = dados2)
+summary(fit15)
+```
+
+```{r}
+fit16 <- coxph(Surv(Tempo, Censura) ~ JaFumou + Solidao + AmigosDroga + Solidao*AmigosDroga, x=T, method="breslow", data = dados2)
+summary(fit16)
+```
+
+Vamos testar as 2 interações que deram significativas juntas num modelo
+```{r}
+fit17 <- coxph(Surv(Tempo, Censura) ~ JaFumou + Solidao + AmigosDroga + JaFumou*AmigosDroga + JaFumou*Solidao, x=T, method="breslow", data = dados2)
+summary(fit17)
+```
+
+Como estamos trabalhando com um nível de significância de $5\%$, não vamos assumir que as duas interações foram significativas.
+
+Agora, fazendo o teste TRV para ver se o modelo com interação é, de fato, melhor.
+```{r}
+trv_int <- 2*(fit15$loglik[2] - fit7$loglik[2])
+
+pvalor <- 1 - pchisq(trv_int, df = 1)
+
+pvalor
+```
+Ao nível de $5\%$ de significância, rejeitamos a hipótese nula. Logo, ficaremos com o modelo mais complexo que tem a interação **JaFumou*AmigosDroga**.
+
+
+## Modelo Final
+```{r}
+summary(fit15)
+```
+
+# Adequação do modelo
+
+## Resíduos de Shoenfeld
+```{r}
+#Teste de proporcionalidade dos riscos:
+#GLOBAL: H0: riscos proporcionais
+# Para cada covariavel: H0: Riscos proporcionais para a q-esima variavel
+cox.zph(fit15, transform="identity") ###g(t)=t
+```
+
+O pressuposto de proporcionalidade dos riscos está sendo violado no nível Global e na variável Solidão.
+
+
+```{r}
+par(mfrow=c(2,2))
+plot(cox.zph(fit15))
+```
+
+Apesar do teste ter retornado violação no pressuposto, a análise gráfica indica linhas razoavelmente horizontais, o que deveria ser de fato.
+
+## Resíduos Deviance
+Esses resíduos servem para avaliar a ocorrência de pontos influentes.
+
+```{r}
+resid_deviance <- residuals(fit15, type = "deviance")
+
+pred <- fit15$linear.predictors
+
+
+
+plot(pred, resid_deviance, xlab = "Preditor linear", ylab = "Resíduos Deviance",
+     ylim = c(-3, 3))
+
+```
+

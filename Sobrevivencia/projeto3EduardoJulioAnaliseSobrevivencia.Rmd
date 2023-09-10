@@ -1,0 +1,602 @@
+---
+title: "Projeto 3 - Análise de sobrevivência"
+author: "Eduardo Freire, Julio Magalhães"
+date: "12/01/2023"
+output:   
+  rmdformats::downcute:
+    self_contained: True
+    code_folding: hide
+header-includes: 
+  \usepackage{dcolumn}
+  \usepackage{placeins}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = F, warning = F)
+set.seed(202010)
+```
+
+## Introdução
+
+No trabalho presente analisamos o consumo de drogas por estudantes do ensino fundamental em escolas públicas da cidade do Rio de Janeiro, mais especificamente o tempo até um estudante do 9º ano experimentar uma droga pela primeira vez, um problema que envolve dados censurados e o tempo até o evento "estudante consumir droga" ocorrer. O cenário descrito leva a crer que uma análise de sobrevivência é adequada para compreender com mais detalhes a situação nessas escolas.
+
+## Descrição dos dados
+
+```{r}
+library(cowplot)
+require(survival)
+require(flexsurv)
+library(readr)
+library(dplyr)
+library(kableExtra)
+library(ggplot2)
+```
+
+```{r}
+drogas <- read_csv("Drogas-RJ.csv")
+names(drogas) <- c("tempo", "censura", "sexo", "cor", "mora_com_mae", "tempo_livre_pais_cientes", "alcool", "cigarro", "pais_fumantes", "freq_solidao", "amigos_usuarios")
+
+
+drogas <- drogas %>% 
+  filter(alcool != 99) %>% 
+  filter(mora_com_mae !=99) %>% 
+  filter(cor != 99) %>% 
+  filter(cigarro != 99) %>% 
+  filter(tempo_livre_pais_cientes != 99) %>%
+  filter(pais_fumantes != 99) %>%
+  filter(freq_solidao != 99) %>%
+  filter(amigos_usuarios != 99) 
+  
+
+tempo <- drogas$tempo
+censura <- drogas$censura
+surv_obj <- Surv(tempo, censura)
+```
+
+```{r}
+head(drogas) %>% 
+kable(caption = "Primeiras observações do dataset") %>%
+  kable_styling(full_width=F)
+```
+
+Os dados são provenientes da Pesquisa Nacional de Saúde do Escolar
+(PeNSE) de 2015, conduzida pelo IBGE(ou seja, um questionário), e se referem ao tempo até a experimentação de drogas ilícitas em uma amostra de estudantes do 9º ano do ensino fundamental de escolas públicas da cidade do Rio de Janeiro.
+
+
+- tempo – Tempo até o primeiro uso de drogas - como: maconha, cocaína, crack, loló, lançaperfume, ecstasy, oxy, etc (variável resposta)
+
+- censura – Indicador de censura (0=censura e 1=falha)
+
+As demais variáveis se referem às seguintes perguntas feitas na pesquisa:
+
+- sexo – Qual é o seu sexo? (1=Masculino e 2=Feminino)
+
+- cor – Qual é a sua cor ou raça? (1=Branca, 2=Preta, 3=Amarela, 4=Parda, 5=Indígena,
+99=Não informado)
+
+- mora_com_mae – Você mora com sua mãe? (1=Sim, 2=Não, 99=Não informado)
+
+- tempo_livre_pais_cientes – NOS ÚLTIMOS 30 DIAS, com que frequência seus pais ou responsáveis sabiam
+realmente o que você estava fazendo em seu tempo livre? (1=Nunca, 2=Raramente, 3=Às
+vezes, 4=Na maior parte do tempo, 5=Sempre, 99=Não informado)
+
+- alcool - Alguma vez na vida você tomou uma dose de bebida alcoólica? (Uma dose equivale a
+uma lata de cerveja ou uma taça de vinho ou uma dose de cachaça ou uísque etc) (1=Sim, 2=Não,
+99=Não informado)
+
+- cigarro – Alguma vez na vida, você já fumou cigarro, mesmo uma ou duas tragadas? (1=Sim,
+2=Não, 99=Não informado)
+
+- pais_fumantes – Algum de seus pais ou responsáveis fuma? (1=Nenhum deles, 2=Só meu pai ou
+responsável do sexo masculino, 3=Só minha mãe ou responsável do sexo feminino, 4=Meu pai e
+minha mãe ou responsáveis, 5=Não sei, 99=Não informado)
+
+- freq_solidao – NOS ÚLTIMOS 12 MESES com que frequência tem se sentido sozinho(a)? (1=Nunca,
+2=Raramente, 3=Às vezes, 4=Na maioria das vezes, 5=Sempre, 99=Não informado)
+
+- amigos_usuários – Quantos amigos seus usam drogas? (1=Nenhum, 2=Poucos, 3=Alguns, 4=A maioria,
+5=Todos, 6=Não sei, 99=Não informado)
+
+O arquivo contém algumas variáveis selecionadas dos microdados originais (que podem ser encontrados
+em https://www.ibge.gov.br/estatisticas/sociais/educacao/9134-pesquisa-nacional-de-saude-doescolar.html?=&t=microdados).
+
+
+# Análise de sobrevivência
+
+No estudo anterior vimos que apenas em algumas variáveis foram observadas diferenças entre os grupos, um indicativo de que elas podem estar presentes em algum modelo para explicar o fenômeno de interessse.
+
+```{r}
+# sexo
+tam_masc <- length(drogas[drogas$sexo==1,]$sexo)
+tam_fem <- length(drogas[drogas$sexo==2,]$sexo)
+grupos<-c(rep(1, tam_masc), rep(2, tam_fem))
+log_rank_sexo <- survdiff(surv_obj~grupos,rho=0)
+
+# tempo_livre_pais_cientes
+a <- length(drogas[drogas$tempo_livre_pais_cientes==1,]$tempo_livre_pais_cientes)
+b <- length(drogas[drogas$tempo_livre_pais_cientes==2,]$tempo_livre_pais_cientes)
+c <- length(drogas[drogas$tempo_livre_pais_cientes==3,]$tempo_livre_pais_cientes)
+d <- length(drogas[drogas$tempo_livre_pais_cientes==4,]$tempo_livre_pais_cientes)
+e <- length(drogas[drogas$tempo_livre_pais_cientes==5,]$tempo_livre_pais_cientes)
+grupos<-c(rep(1, a+b+c), rep(2, d+e))
+log_rank_tempo_livre <- survdiff(surv_obj~grupos,rho=0)
+
+# cor ou raça
+a <- length(drogas[drogas$cor==1,]$cor)
+b <- length(drogas[drogas$cor==2,]$cor)
+c <- length(drogas[drogas$cor==3,]$cor)
+d <- length(drogas[drogas$cor==4,]$cor)
+e <- length(drogas[drogas$cor==5,]$cor)
+grupos<-c(rep(1, a), rep(2, b+d),rep(3, c+e))
+log_rank_raca <- survdiff(surv_obj~grupos,rho=0)
+```
+
+### Testes Log-Rank
+
+```{r}
+variaveis <- c("Sexo", "Cor ou Raça", "Se os pais sabem o que o filho faz no tempo livre")
+testes_log_rank <- c(0.01, 0.01, 0.004)
+data.frame("Variáveis"=variaveis, "p-valor"=testes_log_rank) %>% 
+  kable(caption = "Tests Log-Rank para covariáveis") %>%
+  kable_styling(full_width=F)
+```
+
+## Modelo do projeto anterior
+
+Considerando a distribuição de Weibull:
+
+$$ Y = log(T) = 3.1708 -0.1713 x_4 -0.2391 x_5 $$
+onde x4: "consumo de álcool", x5: "uso de cigarro".
+
+# Modelo de Cox
+
+Iremos ajustar modelos de Cox aos dados e verificar quais variáveis são significativas para um modelo final da taxa de falha. Talvez as variáveis com diferenças significativas entre os grupos venham a aparecer num modelo de Cox, pois ele considera as censuras de um jeito diferente dos modelos que vimos até agora e nossa base possui muitas censuras.
+
+## Escolha das variáveis
+
+O procedimento para selecionar as variáveis é o mesmo descrito no livro do Colosimo. Iremos ajustar alguns modelos iniciais que consideram covariáveis sozinhas. Dessa vez iremos usar o TRV para significância das variáveis dos modelos.
+
+Os critérios adotados para one-hot encoding foram:
+
+Para cor ou raça:
+
+$$
+I(x) = \begin{cases}
+            1, x = \text{branco} \\
+            0, x = \text{demais raças}
+
+\end{cases}
+$$
+
+Para pais cientes e frequência de solidão:
+
+
+$$ I(x) = \begin{cases}
+            1, x = \text{sempre ou quase sempre} \\
+            0, x = \text{demais categorias}
+
+\end{cases} $$
+
+
+Para amigos usuários:
+
+
+$$ I(x) = \begin{cases}
+            1, x = \text{todos ou quase todos} \\
+            0, x = \text{demais categorias}
+
+\end{cases} $$
+
+```{r}
+drogas <- drogas %>%
+  mutate(tempo_livre_pais_cientes = ifelse(tempo_livre_pais_cientes %in% c(4,5) , 1, 0)) %>% 
+  mutate(cor = ifelse(cor == 1 , 1, 0)) %>% 
+  mutate(sexo = ifelse(sexo == 1 , 1, 0)) %>% 
+  mutate(alcool = ifelse(alcool == 1 , 1, 0)) %>%
+  mutate(cigarro = ifelse(cigarro == 1 , 1, 0)) %>%
+  mutate(mora_com_mae = ifelse(mora_com_mae == 1 , 1, 0)) %>% 
+  mutate(freq_solidao = ifelse(freq_solidao %in% c(4,5), 1, 0)) %>%
+  mutate(amigos_usuarios = ifelse(amigos_usuarios %in% c(4,5), 1, 0)) %>% 
+  mutate(pais_fumantes = ifelse(pais_fumantes %in% c(2, 3 ,4), 1, 0))
+
+```
+
+O modelo teórico com todas as covariáveis é dado por:
+
+$$ \lambda({t|Y_i}) = \lambda_0(t) \exp(\beta_1 x_{i1}+ \beta_2 x_{i2} + ... + \beta_9 x_{i9})$$
+
+onde, *x1: "tempo livre, pais cientes", x2: "cor ou raça", x3: "sexo", x4: "consumo de álcool", x5: "uso de cigarro", x6: "frequência de solidão", x7: "amigos usuários", "x8: mora com a mãe", x9:"pais fumantes"*.
+
+e $ \lambda_0(t)$ é o componente não paramétrico
+
+### passo 1
+
+Ajustar todos os modelos contendo uma única covariável. Incluir todas as covariáveis que forem significativas ao nível de 0,1. É aconselhável utilizar o teste da razão de verossimilhanças neste passo.
+
+$$
+H_0: \text{O modelo nulo(+simples) é adequado} \iff \  \beta_i = 0 \\
+
+H_1: \beta_i \neq0
+$$
+
+```{r}
+m0 <- coxph(Surv(tempo, censura) ~ 1, x=T, method="breslow", data = drogas)
+m1 <- coxph(Surv(tempo, censura) ~ cigarro, x=T, method="breslow", data = drogas)
+(m1$loglik-m0$loglik)[2]
+```
+
+```{r}
+build_models <- function(covariaveis){
+  return(lapply(covariaveis, function(x){
+                    coxph(surv_obj ~ eval(parse(text=x)), x=T, method="breslow", data = drogas)
+                    }
+                    ))
+}
+
+show_p_values <- function(modelos, texto_covariaveis){
+  m0 <- coxph(Surv(tempo, censura) ~ 1, x=T, method="breslow", data = drogas)
+  TRVs <- sapply(modelos, function(modelo){(modelo$loglik-m0$loglik)[2]})
+  p_valores <- sapply(TRVs, function(quantil){1-pchisq(quantil, df=1)})
+  tabela_significancia <- data.frame("Covariáveis"=texto_covariaveis, TRV=p_valores)
+  kable(tabela_significancia, caption = "TRV para cada modelo estimado") %>%
+    kable_styling(full_width = F)
+}
+```
+
+```{r}
+modelos <- build_models(c(
+                 "tempo_livre_pais_cientes", 
+                 "cor",
+                 "sexo",
+                 "alcool",
+                 "cigarro",
+                 "freq_solidao",
+                 "amigos_usuarios",
+                 "mora_com_mae",
+                 "pais_fumantes"
+                 ))
+
+```
+
+```{r}
+show_p_values(modelos, c(
+         "x1",
+         "x2",
+         "x3",
+         "x4",
+         "x5",
+         "x6",
+         "x7",
+         "x8",
+         "x9"))
+```
+
+Pela tabela podemos ver que as varíaveis não descartadas no primeiro passo são:
+
+x1: Pais cientes do que os filhos fazem no tempo livre;
+x4: Uso de álcool;
+x5: Uso de cigarro;
+x6: Frequência de solidão;
+x7: Amigos usuários de drogas ilícitas.
+
+### passo 2
+
+As covariáveis significativas no passo 1 são então ajustadas conjuntamente. Na presença de certas covariáveis, outras podem deixar de ser significativas. Consequentemente, ajusta-se modelos reduzidos, excluindo uma única covariável. Verifica-se as  covariáveis que provocam um aumento estatisticamente significativo na estatística da razão de verossimilhanças. Somente aquelas que atingiram a significância permanecem no modelo.
+
+```{r}
+modelos <- build_models(c(
+                "tempo_livre_pais_cientes + alcool + cigarro + freq_solidao",
+                "tempo_livre_pais_cientes + alcool + cigarro + amigos_usuarios",
+                "tempo_livre_pais_cientes + alcool + freq_solidao + amigos_usuarios",
+                "tempo_livre_pais_cientes + cigarro + freq_solidao + amigos_usuarios",
+                "alcool + cigarro + freq_solidao + amigos_usuarios"
+                 ))
+```
+
+```{r}
+show_p_values(modelos, c(
+         "x1 + x4 + x5 + x6",
+         "x1 + x4 + x5 + x7",
+         "x1 + x4 + x6 + x7",
+         "x1 + x5 + x6 + x7",
+         "x4 + x5 + x6 + x7"
+         ))
+```
+
+Testamos diversos modelos e surpreendentemente não obtivemos nenhuma combinação de variáveis não significativa.
+
+### etapa 3
+
+3. Ajusta-se um novo modelo com as covariáveis retidas no passo 2. Neste passo as
+covariáveis excluídas no passo 2 retornam ao modelo para confirmar que elas não
+são estatisticamente significativas.
+
+Como o modelo retido não teve nenhuma covariável excluída, pulamos para o passo 4.
+
+### etapa 4
+
+4. As eventuais covariáveis significativas no passo 3 são incluídas ao modelo juntamente
+com aquelas do passo 2. Neste passo retorna-se com as covariáveis excluídas no
+passo 1 para confirmar que elas não são estatisticamente significativas.
+
+*x1: "tempo livre, pais cientes", x2: "cor ou raça", x3: "sexo", x4: "consumo de álcool", x5: "uso de cigarro", x6: "frequência de solidão", x7: "amigos usuários", "x8: mora com a mãe", "x9: pais fumantes"*.
+
+```{r}
+modelos <- build_models(c(
+                "tempo_livre_pais_cientes + alcool + cigarro + freq_solidao + amigos_usuarios + cor",
+                "tempo_livre_pais_cientes + alcool + cigarro + freq_solidao + amigos_usuarios + sexo",
+                "tempo_livre_pais_cientes + alcool + cigarro + freq_solidao + amigos_usuarios + mora_com_mae",
+                "tempo_livre_pais_cientes + alcool + cigarro + freq_solidao + amigos_usuarios + pais_fumantes"
+                 ))
+```
+
+```{r}
+show_p_values(modelos, c(
+         "x1 + x4 + x5 + x6 + x7 + x2",
+         "x1 + x4 + x5 + x6 + x7 + x3",
+         "x1 + x4 + x5 + x6 + x7 + x8",
+         "x1 + x4 + x5 + x6 + x7 + x9"
+         ))
+```
+
+Todas as variáveis foram significativas, então teremos que ajustar um modelo completo no passo 5 para reduzi-lo.
+
+### etapa 5
+
+5. Ajusta-se um modelo incluindo as covariáveis significativas no passo 4. Neste passo
+é testado se alguma delas pode ser retirada do modelo.
+
+```{r}
+modelos_etapa5 <- coxph(surv_obj ~ tempo_livre_pais_cientes + cor + sexo + alcool + cigarro + freq_solidao + amigos_usuarios + mora_com_mae + pais_fumantes, x=T, method="breslow", data = drogas)
+summary(modelos_etapa5)
+```
+
+As únicas variáveis significativas foram: consumo de álcool, consumo de cigarro e ter amigos usuários de drogas ilícitas.
+
+### etapa 6
+
+6. Utilizando as covariáveis que sobreviveram ao passo 5 ajusta-se o modelo final para
+os efeitos principais. Para completar a modelagem deve-se verificar a possibilidade
+de inclusão de termos de interação. Testa-se cada uma das interações duas a duas
+possíveis entre as covariáveis incluídas no modelo. O modelo final fica determinado
+pelos efeitos principais identificados no passo 5 e os termos de interação significativos
+identificados neste passo.
+
+```{r}
+modelo_final <- coxph(surv_obj ~ alcool + cigarro + amigos_usuarios, x=T, method="breslow", data = drogas)
+summary(modelo_final)
+```
+
+
+### Modelo com interação
+
+No modelo com interação, foram significativas a interação entre álcool e amigos usuários e a interação entre cigarro e amigos usuários.
+
+```{r}
+modelo_final <- coxph(surv_obj ~ alcool + cigarro + amigos_usuarios +  alcool*amigos_usuarios + cigarro*amigos_usuarios, x=T, method="breslow", data = drogas)
+
+summary(modelo_final)
+```
+
+## Modelo selecionado
+
+$$ \lambda({t|Y_i}) = \lambda_0(t)\exp(2.34  x_{i4} + 2.45 x_{i5} + 4.12 x_{i7} -1.85 x_{i4}*x_{i7} -1.22 x_{i5}*x_{i7})$$
+
+## Resíduos de Schoenfeld
+
+Iremos testar se os riscos são de fatos proporcionais, ao nível de cada variável.
+
+#Teste de proporcionalidade dos riscos:
+#GLOBAL: H0: riscos proporcionais
+# Para cada covariavel: H0: Riscos proporcionais para a q-esima variavel
+
+```{r}
+cox.zph(modelo_final, transform="identity") 
+```
+
+O pressuposto de proporcionalidade não é violado a nenhum nível considerando o modelo final, o que pode ser visto também nos gráficos, que possuem curvas com baixa inclinação.
+
+
+```{r}
+par(mfrow=c(2,2))
+plot(cox.zph(modelo_final))
+```
+
+É possível ver que os gráficos dos resíduos de Schoenfeld corroboram com os resultados obtidos pelo teste, ou seja, o pressuposto de proporcionalidade não é violado a nenhum nível.
+
+
+## Resíduos Martingal
+
+Plotamos os preditores lineares versus os resíduos Martingal, mas como não temos variáveis contínuas a análise foi prejudicada e não podemos tirar nenhuma conclusão a partir do gráfico.
+
+```{r}
+residuos_martingal <-resid(modelo_final,type="martingale")    
+library(ggplot2)
+preditores_lineares <- modelo_final$linear.predictors
+plot(preditores_lineares, residuos_martingal,  xlab="Preditor linear", ylab="Resíduos Martingal" , pch=16)
+```
+
+## Resíduos da Deviance
+
+Repetimos o processo para os resíduos da Deviance e tivemos o mesmo problema.
+
+```{r}
+par(mfrow=c(1,2))
+residuos_deviance <- residuals(modelo_final,type="deviance")
+preditores_lineares <- modelo_final$linear.predictors
+plot(preditores_lineares, residuos_deviance,  xlab="Preditor linear", ylab="Resíduos deviance" , pch=16)
+```
+
+## Resíduos de Cox-Snell
+
+Plotamos o gráfico da taxa de falha acumulada estimada versus os resíduos de Cox-Snell para verificar a adequação do modelo aos dados.
+
+```{r}
+residuos_coxsnell <- censura-residuos_martingal
+modelo_residuos <- coxph(formula = Surv(residuos_coxsnell, censura) ~ 1)
+dados_taxa_falha <- basehaz(modelo_residuos, centered = FALSE)
+ggplot(data = dados_taxa_falha, mapping = aes(x = time, y = hazard)) +
+  geom_point() +
+  scale_x_continuous(limit=c(0, 2.7)) +
+  scale_y_continuous(limit=c(0, 2.7)) +
+  geom_abline(intercept=0, slope =1) +
+  labs(x = "Residuos de Cox-Snell",
+    y = "Taxa de falha acumulada estimada") +
+  theme_bw() + theme(legend.key = element_blank())
+```
+
+Parece que há poucos outliers, mas os dados apresentam um comportamento bem próximo de uma reta indicando tendência a uma distribuição exponencial(1), o que significa adequação do modelo.
+
+## DFbetas
+
+```{r}
+par(mfrow=c(2,3))
+dfbetas<-resid(modelo_final,type="dfbeta")
+plot(drogas$alcool, dfbetas[,1], xlab="alcool", ylab="Influência para alcool")
+plot(drogas$cigarro,  dfbetas[,2], xlab="cigarro", ylab="Influência para cigarro")
+plot(drogas$amigos_usuarios,  dfbetas[,3], xlab="amigos_usuarios", ylab="Influência para amigos_usuarios")
+plot((drogas$alcool)*(drogas$amigos_usuarios),    dfbetas[,4], xlab="alcool*amigos_usuarios", ylab="Influência para alcool*amigos_usuarios")
+plot((drogas$cigarro)*(drogas$amigos_usuarios),    dfbetas[,5], xlab="cigarro*amigos_usuarios", ylab="Influência para cigarro*amigos_usuarios")
+```
+Seguindo a regra de (Belsley et al., 1980, p. 28), temos que nosso ponto de corte para determinar um ponto influente seria $\frac{2}{\sqrt{2113}}=0.043$.
+Nenhuma variável apresenta valores influentes(que ultrapassam o ponto de corte), mas a interação cigarro*amigos_usuários apresenta muitos valores influentes.
+
+## Interpretação das razões de riscos
+
+No modelo escolhido podemos interpretar os resultados por meio da razão de riscos:
+
+$$2.34x_{i4} + 2.45x_{i5} + 4.12x_{i7} -1.85x_{i4}*x_{i7} -1.22 x_{i5}*x_{i7}$$
+
+1. Álcool:$e^{2.34}=10.38$. Os jovens que já experimentaram álcool ao menos uma vez têm o risco de experimentar alguma droga ilícita pela primeira vez **10.38 vezes maior** em comparação aos que nunca experimentaram.
+
+2. Cigarro: $e^{2.45} = 11,59$. Os jovens que já experimentaram cigarro ao menos uma vez têm o risco de experimentar alguma droga ilícita pela primeira vez quase **12 vezes maior** em comparação aos que nunca experimentaram.
+
+3. Amigos usuários :$e^{4.12} = 61,56$. Os jovens que têm amigos usuários de drogas ilícitas o risco de experimentar alguma droga ilícita pela primeira vez é de quase **62 vezes maior** em comparação aos que não são usuários.
+
+4. Álcool e Amigos usuários mas não fumou cigarro: Se o adolescente já usou álcool e possui amigos usuários porém não usou cigarro temos $\frac{exp{(2.34+4.12-1.85)}}{exp(2.45)} = 8.67$ vezes a chance de um adolescente que só experimentou cigarro.
+
+5. Álcool e não possui amigos usuários e não fumou cigarro:$\frac{exp(2.34)}{exp{(2.45+4.12-1.22)}} = 0.05$ vezes a chance de usar drogas ilicítas em relação a alguém que já fumou cigarro e possui amigos usuários.
+
+6. fumou cigarro porém não usou álcool e não possui amigos usuários: $\frac{exp(2.45)}{exp{(2.34+4.12-1.85)}} = 0.12$ vezes a chance de usar drogas ilicítas em relação a alguém que já usou álcool e possui amigos usuários.
+
+Interações análogas a essas podem ser feitas para comparações.
+
+
+## Estimativas a partir dos valores preditos
+
+Iremos analisar alguns gráficos construídos a partir dos valores preditos
+
+```{r}
+Ht<-basehaz(modelo_final,centered=F)
+tempos<-Ht$time
+H0<-Ht$hazard
+S0<-exp(-H0)
+
+tt <-sort(tempos)
+aux1 <-as.matrix(tt)
+n <-nrow(aux1)
+aux2 <-as.matrix(cbind(tempos,S0))
+S00 <-rep(max(aux2[,2]),n)
+for(i in 1:n){
+  if(tt[i]> min(aux2[,1])){
+    i1 <- aux2[,1]<= tt[i]
+    S00[i] <-min(aux2[i1,2])}}
+ts0 <-cbind(tt,S00)
+b <- modelo_final$coefficients
+```
+
+
+### Já fumaram/nunca fumaram e nunca beberam
+
+```{r}
+b_alcool <- b[1]
+b_cigarro <- b[2]
+b_amigos_usuarios <- b[3]
+b_amigos_usuarios_cigarro <- b[4]
+b_amigos_usuarios_alcool <- b[5]
+
+s1 <- S00^(exp(b_alcool + b_cigarro))
+s2 <- S00^(exp(b_alcool))
+par(mfrow=c(1,1))
+plot(tt,s1,type="s",ylim=range(c(0,1)),xlab="Tempo",ylab="S(t|x)",lty=1)
+lines(tt,s2,type="s",lty=2)
+
+legend(0, 0.2,lty=c(1,2,3,4),c("B"),
+       lwd=1,bty="n",cex=0.7)
+title("Pessoas que nunca beberam")
+legend("bottomleft", lty=c(1,2), c("Já fumou", "Nunca fumou"), lwd = 1, bty = "n", cex = 0.8)
+```
+
+O gráfico mostra que as pessoas que nunca beberam e já fumaram, tem uma curva de sobrevivência que decai bem mais rapidamente do que as pessoas que nunca beberam e nunca fumaram.
+
+### já beberam/nunca beberam e já fumaram
+
+```{r}
+s1 <- S00^(exp(b_alcool + b_cigarro))
+s2 <- S00^(exp(b_cigarro))
+par(mfrow=c(1,1))
+plot(tt,s1,type="s",ylim=range(c(0,1)),xlab="Tempo",ylab="S(t|x)",lty=1)
+lines(tt,s2,type="s",lty=2)
+
+title("Pessoas que nunca fumaram")
+legend("bottomleft", lty=c(1,2), c("Já bebeu", "Nunca bebeu"), lwd = 1, bty = "n", cex = 0.8)
+```
+
+O resultado é bem similar ao anterior.
+
+
+### já beberam/nunca beberam e tem amigos usuários
+
+```{r}
+s1 <- S00^(exp(b_alcool + b_amigos_usuarios))
+s2 <- S00^(exp(b_amigos_usuarios))
+par(mfrow=c(1,1))
+plot(tt,s1,type="s",ylim=range(c(0,1)),xlab="Tempo",ylab="S(t|x)",lty=1)
+lines(tt,s2,type="s",lty=2)
+
+title("Pessoas que tem amigos usuários de drogas")
+legend("bottomleft", lty=c(1,2), c("Já bebeu", "Nunca bebeu"), lwd = 1, bty = "n", cex = 0.8)
+```
+
+Nesta comparação a diferença é brutal: as pessoas que já beberam e tem amigos usuários tem uma curva de sobrevivência que decai vertiginosamente em comparação as que nunca beberam nas mesmas condições.
+
+
+## Curvas dos riscos acumulados
+
+
+### tem/não tem amigos usuários e já beberam
+
+```{r}
+s1 <- S00^(exp(b_alcool + b_amigos_usuarios))
+s2 <- S00^(exp(b_alcool))
+ht1 <- -log(s1)
+ht2 <- -log(s2)
+plot(tt, ht1,type="s",ylim=range(c(0,4)),xlab="Tempo",ylab="Risco Acumulado",lty=1)
+lines(tt, ht2,type="s",lty=2)
+title("Pessoas que já beberam")
+legend("topleft", lty=c(1,2), c("Tem amigos usuários", "Não tem amigos usuários"), lwd = 1, bty = "n", cex = 0.8)
+```
+
+O risco acumulado aumenta muito rápido a partir dos 13 anos para pessoas que bebem e tem amigos usuários, um resultado que parece fazer bastante sentido.
+
+```{r}
+s1 <- S00^(exp(b_alcool + b_amigos_usuarios))
+s2 <- S00^(exp(b_alcool))
+s3 <- S00^(exp(b_cigarro + b_amigos_usuarios))
+s4 <- S00^(exp(b_cigarro))
+ht1 <- -log(s1)
+ht2 <- -log(s2)
+ht3 <- -log(s3)
+ht4 <- -log(s4)
+plot(tt, ht1,type="s",ylim=range(c(0,4)),xlab="Tempo",ylab="Risco Acumulado",lty=1, col="red")
+lines(tt, ht2,type="s",lty=2, col="blue")
+lines(tt, ht3,type="s",lty=3, col="purple")
+lines(tt, ht4,type="s",lty=4, col = "green")
+title("Pessoas que já beberam, pessoas que já fumaram")
+legend("topleft", lty=c(1,2), c("Bebeu e tem amigos usuários", "Bebeu e não tem amigos usuários", "Fumou e tem amigos usuários", "Fumou e não tem amigos usuários"), lwd = 1, bty = "n", cex = 0.8, col = c("red","blue","purple", "green"))
+```
+
+Agora comparando os riscos acumulados vemos que ter amigos usuários parece ser um fator decisivo para o primeiro consumo de droga ilícita.
+
+
+
