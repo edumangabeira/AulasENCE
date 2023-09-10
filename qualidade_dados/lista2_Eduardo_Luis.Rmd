@@ -1,0 +1,209 @@
+---
+title: "Lista 2 - Qualidade de ocupacao_amostra"
+author: "Eduardo Freire, Luis Henrique Toledo"
+date: "11/11/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, message = F, warning = F)
+```
+
+```{r}
+library(readr)
+library(dplyr)
+library(kableExtra)
+```
+
+# Ponderação e calibração
+
+## Amostra
+
+```{r}
+ocup_amostra <- read_csv("ocupacao_amostra.csv")
+kable(head(ocup_amostra)) %>% kable_styling(full_width=F)
+```
+
+## Total populacional
+
+```{r}
+ocup_tot_pop <- read_csv("ocup_tot_pop.csv")
+kable(head(ocup_tot_pop)) %>% kable_styling(full_width=F)
+```
+
+## Total amostra
+
+```{r}
+ocup_tot_amostra <- read_csv("ocup_tot_amostra.csv")
+kable(head(ocup_tot_amostra)) %>% kable_styling(full_width=F)
+```
+
+## Estimativas a serem calculadas
+
+(a) porcentagens de pessoas ocupadas, desocupadas e inativas por sexo e grupos de idade (15 a 29 anos, 30 a 59 anos, e 60 anos e mais);
+(b) também para as taxas de desocupação (100 * desocupadas / [desocupadas +ocupadas]) nos mesmos domínios;
+(c) estimativas dos totais de pessoas ocupadas, desocupadas e inativas por sexo e grupos de idade (15 a 29 anos, 30 a 59 anos, e 60 anos e mais).
+
+## Questão 1
+
+
+```{r}
+amostra_inicial <- 7427
+amostra_entrevistados <- 5567
+taxa_resposta <- amostra_entrevistados/amostra_inicial
+populacao_total <- 3206624
+peso_amostral <- populacao_total/amostra_inicial
+ocupacao_amostra <- ocup_amostra
+ocupacao_amostra$peso_amostral <- peso_amostral
+ocupacao_amostra$prob_inclusao_s <- 1/ocupacao_amostra$peso_amostral
+
+ocupacao_amostra <- ocupacao_amostra %>% 
+  mutate(categoria = paste(sexo, gr_idade,sep = ' - '))
+
+ocupacao_amostra$taxa_resposta_estimada <- 1
+ocupacao_amostra$peso_ajustado_nr <-ocupacao_amostra$peso_amostral/ocupacao_amostra$taxa_resposta_estimada
+```
+
+(a)
+
+```{r}
+totais <- apply(as.matrix(trunc(table(ocupacao_amostra$categoria,ocupacao_amostra$situ_ocup)*ocupacao_amostra$peso_ajustado_nr[1])),1,sum)
+kable(round((trunc(table(ocupacao_amostra$categoria,ocupacao_amostra$situ_ocup)*ocupacao_amostra$peso_ajustado_nr[1])/totais)*100,2), caption = "Porcentagem de pessoas por status de ocupação segundo sexo e grupos de idade.") %>% kable_styling(full_width = F)
+```
+
+(b)
+
+```{r}
+desocupacao <- ocupacao_amostra %>% 
+  select(categoria,situ_ocup) %>% 
+  group_by(categoria) %>% 
+  summarise(ocupados = trunc(sum(situ_ocup == 'Ocupada')*(populacao_total/amostra_inicial)),
+            desocupados = trunc(sum(situ_ocup == 'Desocupada')*(populacao_total/amostra_inicial)),
+            inativos = trunc(sum(situ_ocup == 'Inativa')*(populacao_total/amostra_inicial))) %>% 
+  mutate(desocupacao  = 100*round(desocupados/(ocupados+desocupados),2)) 
+
+desocupacao <- desocupacao %>% select(categoria, desocupacao) %>% 
+    rename('Taxa de desocupação' = desocupacao, 'Categoria' = categoria)
+kable(desocupacao, caption = "Taxa de desocupação segundo sexo e grupos de idade.") %>% 
+kable_styling(full_width = F)
+```
+
+(c)
+
+```{r}
+kable(trunc(table(ocupacao_amostra$categoria,ocupacao_amostra$situ_ocup)*ocupacao_amostra$peso_ajustado_nr[1]), caption = "Total de pessoas por status de ocupação segundo sexo e grupos de idade.") %>% kable_styling(full_width = F)
+```
+
+## Questão 2
+
+
+```{r}
+estimativas_pop <-
+  ocupacao_amostra %>%
+  select(categoria) %>%
+  group_by(categoria) %>%
+  mutate(total = trunc(n()*peso_amostral)) %>%
+  unique()
+
+ponderacao_nr <- left_join(
+  x = ocupacao_amostra %>%
+    select(categoria) %>%
+    group_by(categoria) %>%
+    mutate(total_respondentes = n()) %>%
+    unique() %>%
+    ungroup(),
+
+  y = data.frame(categoria = estimativas_pop$categoria, total_amostra = c(t(as.matrix(ocup_tot_amostra[1:3, c(3,2)])))),
+
+  by = 'categoria') %>%
+  mutate(fator = 1/round(total_respondentes/total_amostra, 2),
+         ponderado = peso_amostral*fator ) %>%
+  arrange(categoria)
+
+```
+
+(a)
+
+```{r}
+total_linha <- apply(as.matrix(trunc(table(ocupacao_amostra$categoria,ocupacao_amostra$situ_ocup)*ponderacao_nr$ponderado)),1,sum)
+kable(round((trunc(table(ocupacao_amostra$categoria,ocupacao_amostra$situ_ocup)*ponderacao_nr$ponderado) / total_linha)*100,2), caption = "Porcentagens de pessoas por status de ocupação segundo sexo e grupos de idade.") %>% kable_styling(full_width = F)
+```
+
+(b)
+
+```{r}
+desocupacao <- ocupacao_amostra %>% 
+  select(categoria,situ_ocup) %>% 
+  left_join(y=ponderacao_nr[,c(1,5)], by="categoria") %>% 
+  group_by(categoria) %>% 
+  summarise(ocupados     = trunc(sum(situ_ocup == 'Ocupada')*ponderado),
+            desocupados  = trunc(sum(situ_ocup == 'Desocupada')*ponderado),
+            inativos     = trunc(sum(situ_ocup == 'Inativa')*ponderado)) %>%
+  mutate(desocupacao  = 100*round(desocupados/(ocupados+desocupados), 2)) %>%
+  unique()
+  
+desocupacao <- desocupacao %>% select(categoria, desocupacao) %>% 
+    rename('Taxa de desocupação' = desocupacao, 'Categoria' = categoria)
+  
+kable(desocupacao, caption = "Taxa de desocupação segundo sexo e grupos de idade.") %>% kable_styling(full_width = F)
+```
+
+(c)
+
+```{r}
+kable(trunc(table(ocupacao_amostra$categoria,ocupacao_amostra$situ_ocup)*ponderacao_nr$ponderado), caption="Total de pessoas por status de ocupação segundo sexo e grupos de idade.") %>% kable_styling(full_width = F)
+```
+
+
+## Questão 3
+
+```{r}
+colnames(estimativas_pop)[2] <- "tot_estimado"
+
+ponderacao_pop <- left_join(
+  x = estimativas_pop,
+  y = data.frame(categoria = unique(estimativas_pop$categoria),
+                 tot_pop = as.numeric(c(t(as.matrix(ocup_tot_pop[1:3, c(3,2)])))),
+  by = 'categoria'
+)) %>% 
+  mutate(fator = round(tot_pop/tot_estimado, 2),
+         peso_amostral = peso_amostral,
+         ponderado = peso_amostral*fator ) %>%
+  arrange(categoria)
+```
+
+(a)
+
+```{r}
+total_linha <- apply(as.matrix(trunc(table(ocupacao_amostra$categoria,ocupacao_amostra$situ_ocup)*ponderacao_pop$ponderado)),1,sum)
+kable(round((trunc(table(ocupacao_amostra$categoria,ocupacao_amostra$situ_ocup)*ponderacao_pop$ponderado) / total_linha)*100, 2), caption = "Porcentagens de pessoas por status de ocupação segundo sexo e grupos de idade.") %>% kable_styling(full_width = F)
+```
+
+
+(b)
+
+```{r}
+desocupacao <- ocupacao_amostra %>% 
+  select(categoria,situ_ocup) %>% 
+  left_join(y=ponderacao_pop[,c(1,7)], by="categoria") %>% 
+  group_by(categoria) %>% 
+  summarise(
+    ocupados  = trunc(sum(situ_ocup == 'Ocupada')*ponderado),
+    desocupados = trunc(sum(situ_ocup == 'Desocupada')*ponderado),
+    inativos = trunc(sum(situ_ocup == 'Inativa')*ponderado)) %>%
+  mutate(desocupacao = 100*round(desocupados/(ocupados+desocupados), 4)) %>% 
+  unique()
+
+desocupacao <- desocupacao %>% select(categoria, desocupacao) %>% 
+    rename('Taxa de desocupação' = desocupacao, 'Categoria' = categoria)
+  
+kable(desocupacao, caption = "Estimativas das taxas de desocupação segundo sexo e grupos de idade.") %>% kable_styling(full_width = F)
+```
+
+
+(c)
+
+```{r}
+kable(trunc(table(ocupacao_amostra$categoria,ocupacao_amostra$situ_ocup)*ponderacao_pop$ponderado) , caption="Total de pessoas por status de ocupação segundo sexo e grupos de idade.") %>% kable_styling(full_width = F)
+```
+

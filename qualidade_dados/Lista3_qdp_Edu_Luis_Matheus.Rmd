@@ -1,0 +1,215 @@
+---
+title: "Lista 3- Qualidade de dados de Pesquisa"
+author: "Luis Henrique Toledo, Eduardo Freire, Matheus Bom"
+date: "2022-11-30"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, message = F, warning = F)
+```
+
+```{r,include=FALSE}
+library(readxl)
+library(dplyr)
+library(ggpubr)
+library(readr)
+library(stringr)
+library(kableExtra)
+```
+
+
+##### questao 1 parte 1
+
+```{r, echo=FALSE}
+dados <- read_csv("dados_eleicao.csv")
+
+dados <- dados %>% 
+    mutate(across('pct_Lula', str_replace, ",",".")) %>%
+    mutate(across('pct_Bolsonaro', str_replace, ",",".")) %>% 
+    mutate(across('pct_naovalido', str_replace, ",",".")) %>%
+    mutate_at(c('pct_Lula', 'pct_Bolsonaro', 'pct_naovalido'), as.numeric) %>% 
+    mutate(novaprop=(pct_Lula*Entrevistas)/(Entrevistas*(1-pct_naovalido))) %>%
+    mutate(erro=novaprop-0.509)
+
+dadostel <- dados %>% filter(Modo=="Telefonica")
+dadosPres <- dados %>% filter(Modo=="Presencial")
+```
+
+
+### PARA OS DADOS TOTAIS
+
+```{r}
+dadostoterr <- dados$erro
+dadosvicio <- mean(dados$erro)
+dadosvicio2 <- dadosvicio^2
+paste0("A variância da estimativa da proporção de votos no candidato Lula é de  ",round(var(dados$novaprop),4))
+paste0("O vício(erro médio) das 273 estimativas é de ", round(dadosvicio,4))
+paste0("O vício^2  das 273 estimativas é de ", round(dadosvicio2,4))
+paste0("O erro quadrático médio (EQM) é de ", round(dadosvicio2+var(dados$novaprop),4))
+paste0("A raiz quadrada do erro quadrático médio (EQM) é de ", round(sqrt(dadosvicio2+var(dados$novaprop)),4))
+
+```
+
+### PARA OS DADOS DE TELEFONE
+
+```{r, echo=FALSE}
+dadostelerr <- dadostel$erro
+dadosvicio <- mean(dadostel$erro)
+dadosvicio2 <- dadosvicio^2
+paste0("A variância da estimativa da proporção de votos no candidato Lula é de  ",round(var(dadostel$novaprop),4))
+paste0("O vício(erro médio) das 273 estimativas é de ", round(dadosvicio,4))
+paste0("O vício^2  das 273 estimativas é de ", round(dadosvicio2,4))
+paste0("O erro quadrático médio (EQM) é de ", round(dadosvicio2+var(dadostel$novaprop),4))
+paste0("A raiz quadrada do erro quadrático médio (EQM) é de ", round(sqrt(dadosvicio2+var(dadostel$novaprop)),4))
+```
+
+### PARA OS DADOS PRESENCIAIS
+
+```{r, echo=FALSE}
+dadospreserr <- dadosPres$erro
+dadosvicio <- mean(dadosPres$erro)
+dadosvicio2 <- dadosvicio^2
+paste0("A variância da estimativa da proporção de votos no candidato Lula é de  ",round(var(dadosPres$novaprop),4))
+paste0("O vício(erro médio) das 273 estimativas é de ", round(dadosvicio,4))
+paste0("O vício^2  das 273 estimativas é de ", round(dadosvicio2,4))
+paste0("O erro quadrático médio (EQM) é de ", round(dadosvicio2+var(dadosPres$novaprop),4))
+paste0("A raiz quadrada do erro quadrático médio (EQM) é de ", round(sqrt(dadosvicio2+var(dadosPres$novaprop)),4))
+```
+
+
+```{r, echo=FALSE}
+dadosa <- data.frame(dadostoterr,as.factor("Total"))
+colnames(dadosa) <- c("Dados","Tipo")
+dadosb <- data.frame(dadospreserr,as.factor("Presencial"))
+colnames(dadosb) <- c("Dados","Tipo")
+dadosc <- data.frame(dadostelerr,as.factor("Telefônica"))
+colnames(dadosc) <- c("Dados","Tipo")
+
+dadosbp <- rbind(dadosa,dadosb,dadosc)
+
+ggboxplot(dadosbp,x="Tipo",y="Dados",color = "Tipo",xlab = "Tipo da pesquisa",ylab = "Variação do erro",add = "mean",bxp.errorbar = T)
+```
+
+##### questao 1 parte 2
+
+```{r, echo=FALSE}
+dados <- dados %>% filter(Data>"2022-07-31")
+dadostel <- dados %>% filter(Modo=="Telefonica")
+dadosPres <- dados %>% filter(Modo=="Presencial")
+```
+
+### PARA OS DADOS TOTAIS
+
+```{r}
+dadostoterr <- dados$erro
+dadosvicio <- mean(dados$erro)
+dadosvicio2 <- dadosvicio^2
+paste0("A variância da estimativa da proporção de votos no candidato Lula é de  ",round(var(dados$novaprop),4))
+paste0("O vício(erro médio) das 273 estimativas é de ", round(dadosvicio,4))
+paste0("O vício^2  das 273 estimativas é de ", round(dadosvicio2,4))
+paste0("O erro quadrático médio (EQM) é de ", round(dadosvicio2+var(dados$novaprop),4))
+paste0("A raiz quadrada do erro quadrático médio (EQM) é de ", round(sqrt(dadosvicio2+var(dados$novaprop)),4))
+```
+
+### PARA OS DADOS DE TELEFONE
+
+```{r}
+dadostelerr <- dadostel$erro
+dadosvicio <- mean(dadostel$erro)
+dadosvicio2 <- dadosvicio^2
+paste0("A variância da estimativa da proporção de votos no candidato Lula é de  ",round(var(dadostel$novaprop),4))
+paste0("O vício(erro médio) das 273 estimativas é de ", round(dadosvicio,4))
+paste0("O vício^2  das 273 estimativas é de ", round(dadosvicio2,4))
+paste0("O erro quadrático médio (EQM) é de ", round(dadosvicio2+var(dadostel$novaprop),4))
+paste0("A raiz quadrada do erro quadrático médio (EQM) é de ", round(sqrt(dadosvicio2+var(dadostel$novaprop)),4))
+
+```
+
+### PARA OS DADOS PRESENCIAIS
+
+```{r}
+dadospreserr <- dadosPres$erro
+dadosvicio <- mean(dadosPres$erro)
+dadosvicio2 <- dadosvicio^2
+paste0("A variância da estimativa da proporção de votos no candidato Lula é de  ",round(var(dadosPres$novaprop),4))
+paste0("O vício(erro médio) das 273 estimativas é de ", round(dadosvicio,4))
+paste0("O vício^2  das 273 estimativas é de ", round(dadosvicio2,4))
+paste0("O erro quadrático médio (EQM) é de ", round(dadosvicio2+var(dadosPres$novaprop),4))
+paste0("A raiz quadrada do erro quadrático médio (EQM) é de ", round(sqrt(dadosvicio2+var(dadosPres$novaprop)),4))
+
+```
+
+
+```{r}
+dadosa <- data.frame(dadostoterr,as.factor("Total"))
+colnames(dadosa) <- c("Dados","Tipo")
+dadosb <- data.frame(dadospreserr,as.factor("Presencial"))
+colnames(dadosb) <- c("Dados","Tipo")
+dadosc <- data.frame(dadostelerr,as.factor("Telefônica"))
+colnames(dadosc) <- c("Dados","Tipo")
+
+dadosbp <- rbind(dadosa,dadosb,dadosc)
+
+ggboxplot(dadosbp,x="Tipo",y="Dados",color = "Tipo",xlab = "Tipo da pesquisa",ylab = "Variação do erro",add = "mean",bxp.errorbar = T)
+```
+
+## Questão 2
+
+```{r}
+library(univOutl)
+ex_outlier <- read_delim("Exercicio_outlier.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+```
+
+### MAD (Median Absolute Deviation)
+
+```{r}
+metodo_MAD <- LocScaleB(ex_outlier$Rendimento, k=3, method='MAD', weights=ex_outlier$Peso, id=NULL, exclude=NA, logt=FALSE, return.dataframe=TRUE)
+outliers_MAD <- ex_outlier[metodo_MAD$data$outliers==1,]$Rendimento
+length(outliers_MAD)
+(length(outliers_MAD)/length(ex_outlier$Rendimento))*100
+```
+
+### IQR (Inter-Quartile Range)
+
+```{r}
+metodo_IQR <- LocScaleB(ex_outlier$Rendimento, k=3, method='IQR', weights=ex_outlier$Peso, id=NULL, exclude=NA, logt=FALSE, return.dataframe=TRUE)
+outliers_IQR <- ex_outlier[metodo_IQR$data$outliers==1,]$Rendimento
+length(outliers_IQR)
+(length(outliers_IQR)/length(ex_outlier$Rendimento))*100
+```
+
+### Método Boxplot
+
+```{r}
+metodo_boxplot <- boxB(ex_outlier$Rendimento, k=1.5, method='resistant', weights=ex_outlier$Peso, id=NULL, exclude=NA, logt=FALSE)
+
+outliers_box <- ex_outlier[metodo_boxplot$outliers,]
+length(outliers_box$Rendimento)
+(length(outliers_box$Rendimento)/length(ex_outlier$Rendimento))*100
+boxplot(outliers_box$Rendimento)
+```
+
+
+```{r}
+hist(ex_outlier$Rendimento,
+     main="",
+     xlab="Rendimento",
+     ylab = "Frequência",
+     xlim=c(0, 40000), 
+     breaks = 2000
+)
+    
+```
+
+
+```{r}
+a <- data.frame(table(outliers_MAD))
+names(a) <- c("Valor", "Frequencia")
+a <-  a %>% arrange(desc(Frequencia))
+kableExtra::kbl(head(a, 8)) %>%  kable_styling(full_width = F)
+```
+
+
+
