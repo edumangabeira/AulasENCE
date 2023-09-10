@@ -1,0 +1,223 @@
+---
+title: "P2"
+author: "Eduardo Freire Mangabeira"
+date: "`r Sys.Date()`"
+output:
+  tufte::tufte_html: default
+  tufte::tufte_handout:
+    citation_package: natbib
+    latex_engine: xelatex
+  tufte::tufte_book:
+    citation_package: natbib
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+  pdf_document: default
+subtitle: Modelos Estruturais
+runningheader: Modelos Estruturais
+bibliography: skeleton.bib
+link-citations: yes
+---
+
+```{r setup, include=FALSE}
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'), echo=FALSE, warning=FALSE, message=FALSE)
+options(htmltools.dir.version = FALSE)
+```
+
+```{r}
+library(readr)
+library(kableExtra)
+library(knitr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lmtest)
+library(forecast)
+library(tseries)
+library(fpp3)
+library(zoo)
+library(FinTS)
+library(reshape2)
+set.seed(202010111)
+```
+
+# Trabalho P2 de modelos estruturais
+
+## Questão 1
+
+> Adapte o código das equações do FK que você implementou para o modelo de nível local na 1ª VAE para estimar os parâmetros do modelo de tendência linear local. Considere agora que todos os hiperparâmetros do modelo (variâncias dos termos de erro) sejam iguais a 1. Faça um gráfico das duas componentes vetor de estado estimadas ao longo do tempo. Comente.
+
+
+# Conjunto de dados escolhido
+
+A série escolhida contém preços de alta da criptomoeda Bitcoin em dólares e foi observada entre 23/12/2022 e 15/05/2023.
+
+
+```{r}
+maxima_bitcoin <- read_csv("bitcoin.csv")[c("Data", "Máxima")] %>% 
+    rename("data"="Data", "alta"="Máxima")
+maxima_bitcoin$data <- as.Date(maxima_bitcoin$data, format ="%d.%m.%Y")
+maxima_bitcoin <- maxima_bitcoin %>%
+    arrange(data)
+
+ maxima_bitcoin %>%
+    as.data.frame() %>%
+    head() %>% 
+    knitr::kable(align = 'l', caption = "Primeiras observações da série.")
+```
+
+
+```{r fig-margin, fig.margin = TRUE, fig.cap = "Máxima do preço de Bitcoin entre dez/22 e mai/23, em dólares.", fig.width=3.5, fig.height=3.5, cache=TRUE}
+alta <- zoo(maxima_bitcoin$alta, maxima_bitcoin$data)
+autoplot(alta) + 
+    labs(x = "t", y = "Yt") + 
+    theme_minimal()
+```
+
+# Algoritmo do filtro de Kalman
+
+## Passo inicial
+
+```{r, echo=TRUE}
+iniciar_cadeia <- function(s, cv) {
+  list(estado = s, covariancia = cv)
+}
+```
+
+## Função para prever o próximo estado baseado no estado anterior
+
+```{r, echo=TRUE}
+prever_kalman <- function(estado, covariancia, matriz_transicao, ruido) {
+  estado_predito <- matriz_transicao %*% estado
+  cv_predita <- matriz_transicao %*% covariancia %*% t(matriz_transicao) + ruido
+  return(list(estado = estado_predito, covariancia = cv_predita))
+}
+```
+
+## Função para atualizar o estado estimado
+
+```{r, echo=TRUE}
+atualiza_kalman <- function(estado_predito, cv_predita, medida, matriz_observado, ruido_medida) {
+  inovacao <- medida - matriz_observado %*% estado_predito
+  cv_inovacao <- matriz_observado %*% cv_predita %*% t(matriz_observado) + ruido_medida
+  ganho <- cv_predita %*% t(matriz_observado) %*% solve(cv_inovacao)
+  estado_atualizado <- estado_predito + ganho %*% inovacao
+  cv_atualizada <- (diag(1, nrow(cv_predita)) - ganho %*% matriz_observado) %*% cv_predita
+  return(list(estado = estado_atualizado, covariancia = cv_atualizada))
+}
+```
+
+## Utilizando a série de Bitcoin
+
+```{r, echo=TRUE}
+matriz_transicao <- matrix(c(1, 1, 0, 1), nrow = 2, ncol = 2)
+matriz_observado <- matrix(c(1, 0), nrow = 1, ncol = 2)
+
+ruido <- matrix(c(1, 0, 0, 1), nrow = 2, ncol = 2)  
+ruido_medida <- 1
+
+estado_inicial <- matrix(c(alta[[1]], 0), nrow = 2, ncol = 1)
+cv_inicial <- matrix(c(1, 0, 0, 1), nrow = 2, ncol = 2)
+estado_kalman <- iniciar_cadeia(estado_inicial, cv_inicial)
+serie <- alta
+
+filtro_estados1 <- list()
+for (medida in serie) {
+  estado_kalman <- prever_kalman(estado_kalman$estado, estado_kalman$covariancia, matriz_transicao, ruido)
+  estado_kalman <- atualiza_kalman(estado_kalman$estado, estado_kalman$covariancia, medida, matriz_observado, ruido_medida)
+  filtro_estados1 <- c(filtro_estados1, estado_kalman$estado[1])
+}
+
+
+matriz_transicao <- matrix(c(1))
+matriz_observado <- matrix(c(1))
+
+ruido <- matrix(c(1))  
+ruido_medida <- matrix(c(1))
+
+estado_inicial <- matrix(c(0))
+cv_inicial <- matrix(c(1))
+estado_kalman <- iniciar_cadeia(estado_inicial, cv_inicial)
+
+filtro_estados2 <- list()
+for (medida in serie) {
+  estado_kalman <- prever_kalman(estado_kalman$estado, estado_kalman$covariancia, matriz_transicao, ruido)
+  estado_kalman <- atualiza_kalman(estado_kalman$estado, estado_kalman$covariancia, medida, matriz_observado, ruido_medida)
+  filtro_estados2 <- c(filtro_estados2, list(estado_kalman$estado))
+}
+```
+
+
+```{r fig-margin2, fig.fullwidth = TRUE, fig.cap = "Modelo de Tendência Linear Local e Modelo de Nível Local para ajustar máxima do preço de Bitcoin entre dez/22 e mai/23, em dólares.", fig.width=7, fig.height=5, cache=TRUE}
+tendencia <- zoo(unlist(filtro_estados1), maxima_bitcoin$data)
+valor <- zoo(unlist(filtro_estados2), maxima_bitcoin$data)
+plot(valor, col = "#FF171B", ylim = range(alta, tendencia))
+lines(tendencia, col = "#5BB2F5")
+lines(alta, col = "#928B59")
+legend("topleft", legend = c("Tendência Linear Local", "Nível Local", "Dados"), col = c("#FF171B", "#5BB2F5", "#928B59"), lty = 1)
+
+```
+
+  Por ser uma série com muitas observações(diárias) as duas formas de realizar estimativas convergem rapidamente para valores idênticos ao fixar os hiperparâmetros em 1. Já que as variâncias são iguais(os pesos são iguais), o filtro de Kalman tenta ponderar igualmente a influência das previsões do modelo e a dos dados observados, suavizando as flutuações da série nas estimativas.
+
+
+## Questão 2
+
+> Considere a série de passagens aéreas da ANAC, apresentada abaixo:
+
+![](imga.png)
+
+> Explique como você faria para incorporar o efeito da COVID na análise desta série. Represente em espaço de estados o modelo que considerar adequado para capturar esta intervenção (denote a variável de intervenção no seu modelo como t e desenhe o gráfico de sua variável).
+
+
+## Resposta
+
+É possível aplicar o modelo de tendência linear local considerando para a inclinação uma intervenção do tipo pulso. Na representação de espaço de estados tem-se:
+
+
+1. Equação de estado do dado observado
+
+$$Y_t = \mu_t + \epsilon_t, \\ \epsilon_t \sim NID(0, \sigma_\epsilon^2)$$
+
+2. Equação de estado da média local não observada
+
+$$\mu_t = \mu_{t-1} + \beta_{t-1} + \eta_t \\ \eta_t \sim NID(0, \sigma_\eta^2) $$
+3. Equação de estado da tendência linear local
+
+$$\beta_t = \beta_{t-1} + \lambda w_t + \zeta_t \\ \zeta_t \sim NID(0, \sigma_\zeta^2) $$
+
+O termo de intervenção, $\lambda w_t$, captura o efeito da intervenção da COVID-19, onde $w_t$ é a variável de intervenção no tempo $t$. Ele afeta diretamente o estado latente ($Y_t$) na equação de estado.
+
+
+Com as seguintes condições:
+
+$$ w_t = 0, t<t^* \\ w_t =\phi^{t-t^*}_{2}, t\geq t^* \\|\phi_{2}|<1 $$
+
+a. Caso $w_t = 0$,
+
+$$
+\begin{pmatrix} \mu_t \\ \beta_t \\ w_t \end{pmatrix} = \begin{pmatrix} 1 & 1 & \lambda\\ 0 & 1 & 0\\ 0 & 0 & 0 \end{pmatrix} \begin{pmatrix} \mu_{t-1} \\ \beta_{t-1} \\ w_t \end{pmatrix} + \begin{pmatrix} \eta_t \\ \zeta_t \\ 0 \end{pmatrix}
+$$
+Ou seja,
+
+
+$$\mu_t = \mu_{t-1} + \beta_{t-1} + \eta_t + \lambda w_t$$
+
+
+b. Caso  $w_t =\phi^{T-T^*}_{2}$,
+
+$$
+\begin{pmatrix} \mu_t \\ \beta_t \\ w_t \end{pmatrix} = \begin{pmatrix} 1 & 1 & \lambda\\ 0 & 1 & 0\\ 0 & 0 & \phi^{t-t^*}_{2} \end{pmatrix} \begin{pmatrix} \mu_{t-1} \\ \beta_{t-1} \\ w_t \end{pmatrix} + \begin{pmatrix} \eta_t \\ \zeta_t \\ 0 \end{pmatrix}
+$$
+
+Ou seja,
+
+
+$$\mu_t = \mu_{t-1} + \beta_{t-1} + \eta_t + \lambda \phi^{t-t^*}_{2}$$
+
+Uma possível representação gráfica desse cenário de intervenção para COVID-19 pode ser descrita da seguinte forma:
+
+![](imgb.png)
+

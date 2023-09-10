@@ -1,0 +1,226 @@
+---
+title: "P1"
+author: "Eduardo Freire Mangabeira"
+date: "`r Sys.Date()`"
+output:
+  tufte::tufte_html: default
+  tufte::tufte_handout:
+    citation_package: natbib
+    latex_engine: xelatex
+  tufte::tufte_book:
+    citation_package: natbib
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+  pdf_document: default
+subtitle: Modelos Estruturais
+runningheader: Modelos Estruturais
+bibliography: skeleton.bib
+link-citations: yes
+---
+
+```{r setup, include=FALSE}
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'), echo=FALSE, warning=FALSE, message=FALSE)
+options(htmltools.dir.version = FALSE)
+```
+
+```{r}
+library(readr)
+library(kableExtra)
+library(knitr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lmtest)
+library(forecast)
+library(tseries)
+library(fpp3)
+library(zoo)
+library(FinTS)
+library(reshape2)
+set.seed(202010111)
+```
+
+# Trabalho P1 de modelos estruturais
+
+1. Implementar as equações de atualização e filtragem do FK no R para o modelo de nível local. Suponha os dois hiperparâmetros fixos.
+
+Simular 3 cenários:
+
+- Variância da equação do nível = 10 e variância da equação das observações  = 1 \
+- Variância da equação do nível = 1 e variância da equação das observações  = 10 \
+- Ambas as variâncias iguais a 5. \
+
+2. Comentar a diferença entre os resultados para os 3 cenários (gráfico do nivel em relação à série).
+
+Deve ser entregue a rotina e uma série real de exemplo, com os resultados.
+
+
+# Conjunto de dados escolhido
+
+A série escolhida contém preços de alta da criptomoeda Bitcoin em dólares e foi observada entre 23/12/2022 e 15/05/2023.
+
+
+```{r}
+maxima_bitcoin <- read_csv("bitcoin.csv")[c("Data", "Máxima")] %>% 
+    rename("data"="Data", "alta"="Máxima")
+maxima_bitcoin$data <- as.Date(maxima_bitcoin$data, format ="%d.%m.%Y")
+maxima_bitcoin <- maxima_bitcoin %>%
+    arrange(data)
+
+ maxima_bitcoin %>%
+    as.data.frame() %>%
+    head() %>% 
+    knitr::kable(align = 'l', caption = "Primeiras observações da série.")
+```
+
+
+```{r fig-margin, fig.margin = TRUE, fig.cap = "Máxima do preço de Bitcoin entre dez/22 e mai/23, em dólares.", fig.width=3.5, fig.height=3.5, cache=TRUE}
+alta <- zoo(maxima_bitcoin$alta, maxima_bitcoin$data)
+autoplot(alta) + 
+    labs(x = "t", y = "Yt") + 
+    theme_minimal()
+```
+
+# Algoritmo do filtro de Kalman
+
+## Passo inicial
+
+```{r, echo=TRUE}
+iniciar_cadeia <- function(s, cv) {
+  list(estado = s, covariancia = cv)
+}
+```
+
+## Função para prever o próximo estado baseado no estado anterior
+
+```{r, echo=TRUE}
+prever_kalman <- function(estado, covariancia, matriz_transicao, ruido) {
+  estado_predito <- matriz_transicao %*% estado
+  cv_predita <- matriz_transicao %*% covariancia %*% t(matriz_transicao) + ruido
+  list(estado = estado_predito, covariancia = cv_predita)
+}
+```
+
+## Função para atualizar o estado estimado
+
+```{r, echo=TRUE}
+atualiza_kalman <- function(estado_predito, cv_predita, medida, matriz_observado, ruido_medida) {
+  inovacao <- medida - matriz_observado %*% estado_predito
+  cv_inovacao <- matriz_observado %*% cv_predita %*% t(matriz_observado) + ruido_medida
+  ganho <- cv_predita %*% t(matriz_observado) %*% solve(cv_inovacao)
+  estado_atualizado <- estado_predito + ganho %*% inovacao
+  cv_atualizada <- (diag(1, nrow(cv_predita)) - ganho %*% matriz_observado) %*% cv_predita
+  list(estado = estado_atualizado, covariancia = cv_atualizada)
+}
+```
+
+## Utilizando a série de Bitcoin
+
+## Cenário 1
+
+ Variância da equação do nível = 10 e variância da equação das observações = 1
+
+```{r, echo=TRUE}
+matriz_transicao <- matrix(c(1))
+matriz_observado <- matrix(c(1))
+
+ruido <- matrix(c(10))  
+ruido_medida <- matrix(c(1))
+
+estado_inicial <- matrix(c(0))
+cv_inicial <- matrix(c(1))
+estado_kalman <- iniciar_cadeia(estado_inicial, cv_inicial)
+serie <- alta
+
+filtro_estados <- list()
+for (medida in serie) {
+  estado_kalman <- prever_kalman(estado_kalman$estado, estado_kalman$covariancia, matriz_transicao, ruido)
+  estado_kalman <- atualiza_kalman(estado_kalman$estado, estado_kalman$covariancia, medida, matriz_observado, ruido_medida)
+  filtro_estados <- c(filtro_estados, list(estado_kalman$estado))
+}
+```
+
+```{r}
+cenario1 <- zoo(unlist(filtro_estados), maxima_bitcoin$data)
+plot(alta, col = "#FF171B", ylim = range(alta, cenario1))
+lines(cenario1, col = "#5BB2F5")
+legend("topleft", legend = c("Dados", "Cenário 1"), col = c("#FF171B", "#5BB2F5"), lty = 1)
+```
+
+  Como para os dados observados a variância é menor se comparada à variação do modelo(de nível local), tem-se que para cada atualização o peso atribuído ao modelo será mais relevante do que para os dados observados, fazendo com que as observações sejam suavizadas e as previsões do modelo sejam mais influentes para as estimativas do nível. 
+
+  Neste cenário e nos próximos seria interessante separar conjuntos de treino e teste para objetivos de previsão, pois o filtro se ajusta quase perfeitamente aos dados observados(overfitting), o que não tem muito valor para a tarefa de previsão ao se observar novos dados.
+
+## Cenário 2
+
+Variância da equação do nível = 1 e variância da equação das observações = 10
+
+```{r, echo=TRUE}
+matriz_transicao <- matrix(c(1))
+matriz_observado <- matrix(c(1))
+
+ruido <- matrix(c(1))  
+ruido_medida <- matrix(c(10))
+
+estado_inicial <- matrix(c(0))
+cv_inicial <- matrix(c(1))
+estado_kalman <- iniciar_cadeia(estado_inicial, cv_inicial)
+
+filtro_estados <- list()
+for (medida in serie) {
+  estado_kalman <- prever_kalman(estado_kalman$estado, estado_kalman$covariancia, matriz_transicao, ruido)
+  estado_kalman <- atualiza_kalman(estado_kalman$estado, estado_kalman$covariancia, medida, matriz_observado, ruido_medida)
+  filtro_estados <- c(filtro_estados, list(estado_kalman$estado))
+}
+
+```
+
+```{r}
+cenario2 <- zoo(unlist(filtro_estados), maxima_bitcoin$data)
+plot(alta, col = "#FF171B", ylim = range(alta, cenario1))
+lines(cenario2, col = "#5BB2F5")
+legend("topleft", legend = c("Dados", "Cenário 2"), col = c("#FF171B", "#5BB2F5"), lty = 1)
+```
+
+
+Dessa vez o cenário se inverte, para os dados observados a variância é maior se comparada à variação do modelo(de nível local), portanto o filtro de Kalman se torna mais sensível aos dados observados e as estimativas do nível sofrem mais influência dos dados observados.
+
+Neste cenário as previsões não se ajustam tão bem quanto no primeiro(o que pode não vir a ser um problema, depende da finalidade de uso e de como é feito o tratamento para série a ser prevista antes de aplicar o filtro de Kalman).
+
+
+## Cenário 3
+
+Ambas as variâncias iguais a 5
+
+```{r, echo=TRUE}
+matriz_transicao <- matrix(c(1))
+matriz_observado <- matrix(c(1))
+
+ruido <- matrix(c(5))  
+ruido_medida <- matrix(c(5))
+
+estado_inicial <- matrix(c(0))
+cv_inicial <- matrix(c(1))
+estado_kalman <- iniciar_cadeia(estado_inicial, cv_inicial)
+
+filtro_estados <- list()
+for (medida in serie) {
+  estado_kalman <- prever_kalman(estado_kalman$estado, estado_kalman$covariancia, matriz_transicao, ruido)
+  estado_kalman <- atualiza_kalman(estado_kalman$estado, estado_kalman$covariancia, medida, matriz_observado, ruido_medida)
+  filtro_estados <- c(filtro_estados, list(estado_kalman$estado))
+}
+    
+```
+
+```{r}
+cenario3 <- zoo(unlist(filtro_estados), maxima_bitcoin$data)
+plot(alta, col = "#FF171B", ylim = range(alta, cenario1))
+lines(cenario3, col = "#5BB2F5")
+legend("topleft", legend = c("Dados", "Cenário 3"), col = c("#FF171B", "#5BB2F5"), lty = 1)
+```
+
+  Já que as variâncias são iguais(os pesos são iguais), o filtro de Kalman tenta ponderar igualmente a influência das previsões do modelo e a dos dados observados. 
+
