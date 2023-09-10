@@ -1,0 +1,283 @@
+---
+title: "MODELO DE REGRESSÃO LOGÍSTICA PARA CLASSIFICAÇÃO DE NOTAS DE FILMES PELO PÚBLICO"
+author: "Eduardo Freire, Matheus Bom"
+date: "01/08/2022"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=F, warning=F)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(kableExtra)
+library(readr)
+library(tidyr)
+library(psy)
+library(readr)
+library(ggcorrplot)
+library(stringr)
+require(nnet)
+require(VGAM)
+require(epiDisplay)
+require(MASS)
+```
+
+## Introdução
+
+Há muito tempo cinema é uma das maiores indústrias do mundo, movimentando bilhões de dólares em todo o planeta. Assistir um filme no cinema é um dos _hobbies_ mais populares que podemos ver em grandes centros urbanos, lotando bilheterias a cada grande lançamento de obras cinematográficas. Neste trabalho, propomos um modelo de regressão logística multinomial ordinal para avaliar a influência de algumas características de filmes visando compreender melhor o impacto na nota dada pelo público.
+
+
+```{r, out.width = "180px", out.height= "300px", echo=FALSE}
+
+knitr::include_graphics(c(
+    "https://upload.wikimedia.org/wikipedia/pt/2/22/Titanic_poster.jpg",
+    "https://img.elo7.com.br/product/original/2692B10/big-poster-filme-top-gun-lo04-tamanho-90x60-cm-presente-geek.jpg",
+    "https://lumiere-a.akamaihd.net/v1/images/p_walle_19753_69f7ff00.jpeg",
+    "https://br.web.img3.acsta.net/medias/nmedia/18/83/07/18/19702766.jpg"
+    ))
+```
+
+## Descrição dos dados
+
+A base de dados utilizada possui 74 observações de filmes com a maior receita bruta entre os anos de 2007 e 2011. Dentre os atributos contemplados, o que será selecionado como variável resposta é a "Nota do público", enquanto as outras 7 variáveis abaixo servirão como variáveis explicativas:
+
+
+```{r}
+
+library(rmdformats)
+variaveis_filme <- c("Duração", "Gênero", "Estúdio", "Receita bruta", "Lucro", "Nota Rotten Tomatoes", "Ano", "Nota público")
+descricao_filme <- c("Duração do filme em minutos (contínua).",
+                     "Gênero do filme (categórica).",
+                     "Estúdio que produziu o filme (categórica).",
+                     "Receita bruta arrecadada com o filme (contínua).",
+                     "Lucro ao redor do mundo (contínua).",
+                     "Nota dada por especialistas (categórica ordinal).",
+                     "Ano de lançamento do filme (discreta).",
+                     "Nota do público de 1 a 5 estrelas (categórica ordinal).")
+
+tabela_filme <- data.frame(variaveis_filme, descricao_filme)
+kable(tabela_filme[,], caption = "Variáveis explicativas e resposta")
+
+
+
+```
+
+
+## Descrição dos dados
+
+- 74 linhas e 10 colunas 
+
+**Explicativas**
+ 
+ - duracao: duração do filme em minutos(contínua).
+ - genero: gênero do filme(categórica).
+ - estudio: estúdio que produziu o filme(categórica).
+ - lucro: lucro ao redor do mundo(contínua).
+ - nota_rotten_tomatoes: nota dada por especialistas(categórica ordinal).
+ - receita_bruta: receita bruta arrecadada com o filme(contínua).
+ - ano: ano de lançamento do filme(discreta).
+
+## Descrição dos dados
+ 
+ **Resposta**
+
+- nota_publico: nota do público de 1 a 5 estrelas(categórica ordinal).
+
+
+ As notas que obtivemos originalmente estavam numa escala de 1 a 100. Convertemos a partir da seguinte regra:
+
+
+-  0-19: 1 estrela
+- 20-39: 2 estrelas
+- 40-59: 3 estrelas
+- 60-89: 4 estrelas
+- 90-100: 5 estrelas
+
+```{r}
+movies <- as.data.frame(read_csv("final_movies.csv")[-1][-2])
+names(movies) <- c("duracao", "titulo", "genero", "estudio", "nota_publico", "lucro", "nota_rotten_tomatoes", "receita_bruta", "ano")
+movies <- movies %>% dplyr::select(titulo, estudio, nota_publico, nota_rotten_tomatoes, genero, duracao, lucro, receita_bruta, ano)
+
+```
+
+
+```{r}
+movies$nota_publico <- cut(movies$nota_publico,
+                           breaks=c(0, 19, 39, 59, 89, 100),
+                           labels = c(1, 2, 3, 4, 5)
+                           )
+movies$nota_rotten_tomatoes <- cut(movies$nota_rotten_tomatoes,
+                           breaks=c(0, 19, 39, 59, 89, 100),
+                           labels = c(1, 2, 3, 4, 5)
+                           )
+
+movies <- movies %>% 
+  mutate(genero = str_replace(genero, "Comdy", "Comedy")) %>%
+  mutate(genero = str_replace(genero, "comedy", "Comedy")) %>%
+  mutate(genero = str_replace(genero, "romance", "Romance")) %>% 
+  mutate(genero = str_replace(genero, "Romence", "Romance"))
+```
+
+## Tabela
+
+```{r out.width = "50%", out.height= "50%",}
+movies %>% 
+    dplyr::select(titulo, estudio, nota_publico, nota_rotten_tomatoes) %>% 
+    sample_n(5) %>% 
+    kable(caption = "Algumas observações do dataset") %>%
+      kable_styling(full_width = F)
+```
+
+## Tabela
+
+```{r out.width = "50%", out.height= "50%",}
+movies %>% 
+    dplyr::select(titulo, duracao, ano, lucro, receita_bruta) %>% 
+    sample_n(5) %>% 
+    kable(caption = "Algumas observações do dataset") %>%
+      kable_styling(full_width = F)
+```
+
+
+
+## Limpeza dos dados
+
+```{r}
+summary(movies)
+```
+
+Como é possível observar na tabela acima(resultado da função summary() no R), não há valores faltantes no dataset.
+
+## Análise Exploratória
+
+- Outliers:
+
+Como esperado, em alguns filmes as variáveis de investimento irão sobressair. Porém, não há motivos inicialmente para remover essas observações da análise.
+
+## Lucro 
+
+```{r fig.height=3.5, fig.width=4.5}
+
+par(mfrow=c(1, 2))
+movies %>% 
+ggplot(aes(x=lucro)) +  
+  geom_boxplot(fill="slateblue", alpha=0.2)
+```
+
+## Receita bruta
+
+```{r fig.height=3.5, fig.width=4.5}
+movies %>% 
+ggplot(aes(x=receita_bruta)) +  
+  geom_boxplot(fill="slateblue", alpha=0.2)
+```
+
+## Distribuição de notas do público
+
+Uma observação interessante é que nenhum dos filmes receberam notas 1 ou 5 pelo público e a maior parte das notas foram 4.
+
+```{r fig.height=3.5, fig.width=4.5}
+movies %>% 
+ggplot(aes(y=nota_publico)) +  
+  geom_bar(fill="slateblue", alpha=1.2)
+```
+
+
+## Distribuição de notas do público por gênero
+
+```{r fig.height=3.5, fig.width=4.5}
+g <- ggplot(movies, aes(genero))
+g + 
+  geom_bar(aes(fill=nota_publico)) + 
+  scale_x_discrete(guide = guide_axis(angle = 30)) +
+  scale_fill_manual(values=c("#999999", "#E69F00", "#56B4E9"))
+```
+
+## Matriz de correlação
+
+Receita bruta parece ter alguma correlação com a duração do filme, o que faz sentido, já que grandes produções cinematográficas costumam ter longas durações.
+
+```{r fig.height=4.1, fig.width=5.5}
+movies_explicativas <-  movies  %>% 
+  dplyr::select(nota_rotten_tomatoes, receita_bruta, lucro, ano, duracao) %>% 
+  mutate(nota_rotten_tomatoes=as.integer(nota_rotten_tomatoes))
+  
+corr <- cor(movies_explicativas)
+ggcorrplot::ggcorrplot(corr, hc.order = TRUE, type = "lower",
+   lab = TRUE, tl.srt = 45)
+
+```
+
+## Ajuste do modelo maximal
+
+Não encontramos na literatura nenhum material que sugerisse que as notas do público especializado teria alguma relação com a nota do público. Também não encontramos no caso da variável estúdio. Porém, ainda iremos utilizar variáveis explicativas que acreditamos representar bem a resposta que buscamos analisar.
+
+## Ajuste do modelo maximal
+
+```{r}
+movies_modelvars <-  movies %>% 
+  dplyr::select(-titulo) %>% 
+  mutate(nota_publico=as.factor(as.integer(nota_publico))) %>% 
+  mutate(duracao=as.integer(duracao))
+
+
+#maxmodel <- polr(nota_publico ~ ., start = runif(20), data=movies_modelvars, model = T)
+
+#summary(maxmodel)
+```
+
+
+## Modelo Maximal
+
+$$ln\Big(\frac{\hat\pi_i}{1-\hat\pi_i}\Big)= X_i1 + X_i2 + X_i3 + X_i4 + X_i5 + X_i6 + X_i7 + X_i8 $$
+
+## Ajuste do modelo reduzido
+
+Usamos o método de seleção stepwise para encontrar um modelo reduzido e encontramos as variáveis ano e receita bruta. Por mais que receita bruta faça muito sentido, temos poucos anos no nosso dataset e encontramos na literatura que a variável [...] é importante para explicar a reação do público a um filme. Portanto, substituímos a variável ano, estimamos um novo modelo e ele se saiu bem em comparação ao maximal
+
+
+## Ajuste do modelo reduzido - stepwise
+
+```{r}
+#step_model <- maxmodel %>% stepAIC(trace = FALSE)
+#anova(step_model, maxmodel)
+```
+
+$$ln\Big(\frac{\hat\pi_i}{1-\hat\pi_i}\Big)= X_i3 + X_i4$$
+
+## Ajuste do modelo reduzido - literatura
+
+```{r}
+#model <- polr(nota_publico ~ genero + receita_bruta, data=movies_modelvars, model = T)
+#model
+#anova(model , maxmodel)
+```
+
+$$ln\Big(\frac{\hat\pi_i}{1-\hat\pi_i}\Big)= X_i4 + X_i5 + X_i6 + X_i7 + X_i8 $$
+
+## Bondade do ajuste
+
+Vamos usar o seguinte teste usando a estatística deviance:
+
+- $H_0$: o modelo proposto se adequa tão bem quanto o modelo saturado
+- $H_1$: o modelo proposto não se adequa tão bem quanto o modelo saturado
+
+
+(BOTAR A FÓRMULA DA DEVIANCE AQUI)
+
+```{r}
+# 1 - pchisq(deviance(model), df.residual(model))
+```
+
+
+## Análise dos resíduos
+
+AAAAAAAAAAAA
+
+## Fontes
+
+https://www.exibidor.com.br/noticias/mercado/12565-mercado-de-entretenimento-global-cresce-em-2021-impulsionado-por-streaming-e-gradual-recuperacao-dos-cinemas
+

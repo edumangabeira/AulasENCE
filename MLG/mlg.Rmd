@@ -1,0 +1,89 @@
+---
+title: "MLG"
+author: "Eduardo Freire"
+date: "14 de maio de 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Método dos Escores
+
+Usado para estimar os parâmetros de um MLG. Difere do método de Newton-Raphson por usar o valor esperado da matriz *$H$*, que é a matriz *$\zeta$*. Essa troca é feita porque *$H$* pode ser não singular. Em geral, este método é mais simples que N-R e coincide com este quando se usa as funções de ligação canônicas.
+
+
+$$b_{t+1} = (X^TW_tX)^{-1}X^tW_{t}z_t = b + [\zeta_t]^{-1}U^T$$
+
+Passos:
+
+1 - Definir um valor inicial para $b_0$.
+
+2 - Obter os valores de $\mu_i$ e $\frac{\partial\eta}{\partial\mu_i}$ em $b_t$, onde $\eta_i = \beta_1 + \beta_2x_i$.
+
+3 - Obter matriz diagonal W com $w_i = \frac{\Big(\frac{\partial\eta}{\partial\mu_i}\Big)^2}{Var(Y_i)}$ em $b_t$.
+
+4 - Obter o vetor $z$ tal que $z_i = x_i^Tb^T + (yi-\mu^t)\Bigg(\frac{\partial\eta_i^{(t)}}{\partial\mu_i^{(t)}}\Bigg)$.
+
+5 - Calcular o novo $b_{t+1} = (X^TW_tX)^{-1}X^tW_{t}z_t$.
+
+6 - Verificar por algum critério se dever-se continuar com as iterações, por exemplo:
+
+$$\sum_{j=1}^{p}\Bigg(\frac{b_j^{(t+1)}-b_j^{(t)}}{b_j^{(t)}}\Bigg)^2 < \xi$$
+
+```{r, warning=FALSE, message=FALSE}
+metodo_escores <- function(x, y, num_coeficientes, tolerancia, max_iter){
+  
+  x <- matrix(c(rep(1, nrow(y)), x), ncol=num_coeficientes, byrow=FALSE)
+  b_atual <- matrix(c(1, 2), nrow=num_coeficientes)
+  iteracoes <- 0
+  N <- length(y)
+  
+  while(TRUE){
+    iteracoes <- iteracoes + 1
+    b_anterior <- b_atual 
+    eta <- x%*%b_anterior
+    esperanca <- eta
+    derivada_eta_esperanca <- rep(1, N)
+    variancia_y <- esperanca
+    w <- cria_matriz_w(derivada_eta_esperanca, variancia_y)
+    z <- cria_vetor_z(eta, y, esperanca, derivada_eta_esperanca)
+    
+    b_atual <- solve(t(x)%*%w%*%x)%*%t(x)%*%w%*%z
+    
+    criterio_parada <- sum(((b_atual - b_anterior)/b_anterior)^2)
+    if(criterio_parada > tolerancia | iteracoes > max_iter){
+      break
+    }
+  }
+  
+  return(b_atual)
+}
+
+
+cria_matriz_w <- function(dn_dmu, var_y){
+  return(diag(c((1/dn_dmu)^2/var_y)))
+}
+
+
+cria_vetor_z <- function(eta, y, mu, dn_dmu){
+  return(eta + (y-mu)*dn_dmu)
+  
+}
+
+
+x <- c(-1,-1,0,0,0,0,1,1,1)
+y <- matrix(c(2,3,6,7,8,9,10,12,15),ncol=1)
+
+metodo_escores(
+  x=x,
+  y=y,
+  num_coeficientes=2,
+  tolerancia=10^(-11),
+  max_iter=1000
+)
+
+```
+
+
