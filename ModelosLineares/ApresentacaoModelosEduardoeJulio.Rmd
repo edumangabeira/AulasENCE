@@ -1,0 +1,396 @@
+---
+title: Modelo de regressão linear múltipla para estimar o comprimento do bico de pinguins gentoo no arquipélago palmer
+author: "Eduardo Freire, Julio Magalhães"
+date: "03/02/2022"
+output:
+  ioslides_presentation:
+    widescreen: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introdução
+
+Os dados de `palmerpenguins` contém medidas de tamanho para três espécies de pinguins
+observadas em três ilhas no Arquipélago Palmer, na Antártida. Esses dados foram coletados de 2007 a 2009 pela Dra. Kristen Gorman com o Palmer Station Long Term Ecological Research Program[1], parte da US Long Term Ecological Research Network[2].
+
+[1] Palmer Station, Antarctica LTER. Página web. http://https://pal.lternet.edu. Acessado: 01-02-2022.
+
+[2] US Long Term Ecological Research Network. Página web. http://https://https://lternet.edu/
+Acessado: 01-02-2022
+
+## Introdução
+
+![](https://allisonhorst.github.io/palmerpenguins/reference/figures/lter_penguins.png){width=75%}
+
+## Introdução
+
+O presente trabalho se propõe a investigar quais variáveis podem melhor explicar o comprimento do bico de pinguins da espécie Gentoo no arquipélago Palmer.
+
+
+Ao decorrer do processo foi preciso ajustar diversos modelos de regressão linear múltipla
+até escolher o modelo mais adequado aos dados e que respeita as suposições de normalidade, homocedasticidade e independência dos erros, além de linearidade entre as variáveis. 
+
+## Revisão Bibliográfica
+
+Segundo os principais estudos sobre os pinguins da ilha Palmer, a variável sexo possui forte relação com o tamanho do comprimento do bico de todos os pinguins da ilha palmer, mas a espécia Gentoo em especial possui o coeficiente mais influente para essa variável em alguns dos modelos propostos[3] e por conta disso supomos razoável incluir a variável no ajuste final. 
+
+[3] GORMAN, Kristen B.; WILLIAMS, Tony D.; FRASER, William R. Ecological sexual dimorphism and environmental variability within a community of Antarctic penguins (genus
+Pygoscelis). PloS one, v. 9, n. 3, p. e90081, 2014.
+
+## Revisão Bibliográfica
+
+Como a maioria dos modelos dos artigos de referência são modelos lineares generalizados[4], nossa técnica de encontrar o melhor modelo foi falha.
+
+[4] GORMAN, Kristen; LTER, Palmer Station Antarctica. Structural size measurements
+and isotopic signatures of foraging among adult male and female Gentoo penguins (Pygoscelis papua) nesting along the Palmer Archipelago near Palmer Station, 2007-2009. 2014.
+
+## Dataset - Variáveis explicativas
+
+- sex: Sexo do Pinguim. (variável binária)
+- year: Ano de coleta do dado. (variável qualitativa)
+- island: Ilha de origem do pinguim. (variável qualitativa)
+- species: Espécie do pinguim.(variável qualitativa)
+- bill_depth_mm: Profundidade do bico do pinguim em milímetros.(variável quantitativa contínua)
+- flipper_length_mm: Comprimento da nadadeira do Pinguim em milímetros. (variável quantitativa contínua)
+- body_mass_g: Massa corporal em gramas do pinguim.
+
+
+## Dataset - Variáveis resposta
+
+- bill_length_mm: Comprimento do bico do pinguim em milímetros. (variável quantitativa contínua)
+
+
+## Dataset
+
+
+![](https://allisonhorst.github.io/palmerpenguins/reference/figures/culmen_depth.png){width=75%}
+
+
+## Dataset
+
+```{r palmerpenguins, warning=FALSE, message=FALSE}
+library(kableExtra)
+library(magrittr)
+dataset <- palmerpenguins::penguins
+head(dataset) %>%
+  kableExtra::kbl() %>%
+  kableExtra::kable_classic_2(full_width = F)
+```
+
+## Limpando o dataset
+
+Existem 11 linhas com valores faltantes no dataset. Para não prejudicar o experimento, retiramos todas as linhas em que pelo menos uma coluna não tenha um dado. Também filtramos os dados para apenas selecionar a espécie Gentoo.
+
+
+Em seguida verificamos se havia algum valor discrepante na amostra para as variáveis numéricas por meio de box plots.
+
+```{r warning=FALSE, message=FALSE, echo=FALSE}
+library(tidyr)
+library(dplyr)
+library(purrr)
+dados <- dataset %>% 
+    tidyr::drop_na(names(dataset)) %>%
+    dplyr::filter(species=="Gentoo") %>% 
+    dplyr::select(bill_length_mm, everything(), -year)
+
+```
+
+
+## Distribuição da massa corporal em gramas
+
+```{r}
+boxplot(dados$"body_mass_g", ylab="body_mass_g")
+```
+
+## Distribuição da profundidade do bico em milímetros
+
+```{r}
+boxplot(dados$"bill_depth_mm", ylab="bill_depth_mm")
+```
+
+## Distribuição do comprimento da nadadeira em milímetros
+
+```{r}
+boxplot(dados$"flipper_length_mm", ylab="flipper_length_mm")
+```
+
+## Distribuição do comprimento do bico em milímetros
+
+```{r}
+boxplot(dados$"bill_length_mm", ylab="bill_length_mm")
+```
+
+
+## Detecção do outlier
+
+Testamos um novo modelo retirando o valor discrepante usando o teste de Grubbs para identificá-lo($Ho$: O valor mais alto do dataset não é discrepante).
+
+```{r, warning=FALSE, message=FALSE}
+library(outliers)
+outlier <- outliers::grubbs.test(dados$bill_length_mm)
+if(outlier$p.value < 0.05){
+  dados <- dados %>%
+    dplyr::filter(bill_length_mm != max(bill_length_mm))
+}
+
+boxplot(dados$bill_length_mm, ylab="bill_length_mm")
+```
+
+### Transformando a variável sexo em numérica
+
+Para poder realizar operações com a variável `sexo`, escolhemos "feminino" como categoria de referência e transformamos a coluna em numérica.
+
+```{r}
+dados$sex <- ifelse(dados$sex=="female", 1, 0)
+```
+
+### One-hot encoding das variáveis categóricas
+
+Criamos 3 variáveis indicadoras para a variável categórica `ilha`.
+
+```{r, message=FALSE, warning=FALSE}
+library(mltools)
+library(data.table)
+dados <- mltools::one_hot(data.table::as.data.table(dados))
+head(dados) %>%
+  kableExtra::kbl() %>%
+  kableExtra::kable_classic_2(full_width = F)
+```
+
+
+## Seleção do modelo
+
+Usamos inicialmente o método de "todos os modelos possíveis" para escolher o melhor modelo. Avaliamos as métricas $R^2$, $R^2$ ajustado, estatística PRESS e informação de Akaike(AIC).
+
+
+```{r}
+
+ajusta_todos_modelos <- function(dados){
+    explicativas <- colnames(dados)[2:ncol(dados)]
+    ajustes <- list()
+    for (i in seq_along(explicativas)) {
+      combinacoes <- combn(explicativas, i)
+      soma_explicativas <- apply(combinacoes, 2, paste, collapse="+")
+      ajustes[[i]] <- paste0("bill_length_mm~", soma_explicativas)
+    }
+    ajustes <- sapply(unlist(ajustes), as.formula)
+    modelos <- lapply(ajustes, lm, data=dados)
+    return(modelos)
+}
+
+```
+
+
+Escolhemos os seguintes critérios para tornar automática a comparação entre modelos:
+
+- Diferença entre o $R^2$ do modelo mais simples e do mais completo menor que 0.05,
+
+- $R^2$ do modelo mais recente for maior que o modelo antigo em 0.09.
+
+- AIC do modelo antigo maior que do modelo novo.
+
+- Estatística PRESS do modelo antigo maior que do modelo novo.
+
+Se TODOS os critérios acima são respeitados, o modelo novo é escolhido.
+
+
+```{r message=FALSE, warning=FALSE}
+
+complexidade <- function(modelo){
+    return(length(coefficients(modelo)))
+}
+
+calcula_press <- function(modelo){
+    influencia <- residuals(modelo)/ (1-lm.influence(modelo)$hat)
+    return(sum(influencia^2))
+}
+
+
+confere_diferenca_metricas <- function(modelo_novo, modelo_antigo){
+    # R2 e R2 Ajustado
+    s_modelo_novo = summary(modelo_novo)
+    s_modelo_antigo = summary(modelo_antigo)
+    diff_r2 <- s_modelo_novo$r.squared - s_modelo_antigo$r.squared
+    diff_r2_ajustado<- s_modelo_novo$adj.r.squared - s_modelo_antigo$adj.r.squared
+    r2_significativo <- abs(diff_r2) <= 0.03
+    r2_ajustado_significativo <- abs(diff_r2_ajustado) <= 0.03
+    r2_grande <- diff_r2 > 0 & abs(diff_r2) >= 0.07
+    r2_ajustado_grande <- diff_r2_ajustado > 0 & abs(diff_r2) >= 0.07
+    
+    
+    # PRESS e AIC
+    aic <- AIC(modelo_novo) < AIC(modelo_antigo)
+    press <- calcula_press(modelo_novo) < calcula_press(modelo_antigo)
+    
+    diff_significativa <- r2_significativo & r2_ajustado_significativo & aic & press
+    if(diff_significativa){
+        return("significativa")
+    }
+  
+    # & aic & press
+    diff_grande <- r2_grande & r2_ajustado_grande & aic & press
+    if(diff_grande){
+        return("grande")
+    }
+    
+    return("não significante")
+}
+
+escolhe_melhor_modelo <- function(modelos){
+    melhor_modelo = modelos[[1]]
+    for(modelo in modelos){
+        diferenca_metricas <- confere_diferenca_metricas(modelo, melhor_modelo)
+        if((complexidade(melhor_modelo) > complexidade(modelo)) & diferenca_metricas == "significativa"){
+            melhor_modelo <- modelo
+        }
+        
+        if(diferenca_metricas == "grande"){
+            melhor_modelo <- modelo 
+        }
+    }
+    return(melhor_modelo)
+    }
+```
+
+## Resultado
+
+```{r message=FALSE, warning=FALSE}
+library(jtools)
+seleciona_modelo <- function(dados){
+    melhor_modelo <- dados %>%
+        ajusta_todos_modelos() %>% 
+        escolhe_melhor_modelo()
+    return(melhor_modelo)
+}
+
+model <- seleciona_modelo(dados)
+jtools::summ(model)
+```
+
+
+## Modelo escolhido
+
+Como os modelos dos artigos de referência são modelos lineares generalizados, nossa técnica de encontrar o melhor modelo linear foi falha. Usamos o método de todos os modelos possíveis, mas chegamos à conclusão de que o modelo não reforçava o que diz a literatura e não respeitava as suposições de um modelo linear. 
+
+## Modelo escolhido
+
+Optamos por modelos baseados nas variáveis mais presentes na literatura e manualmente testar a violação de suposições através da análise de resíduos e realizar a comparação entre modelos reduzidos com o modelo completo por meio do teste F-parcial. Também analisamos valores influentes por meio das DFBETAS, que não ultrapassaram o limiar $\frac{2}{\sqrt{118}}$ para nenhuma variável do modelo. Logo não foi preciso se preocupar com valores influentes alterando o ajuste do modelo. É seguro também afirmar que não houve problemas de colinearidade no modelo, pois calculamos os fatores de inflação de variância para cada variável e todos foram baixos. No fim foi necessária uma transformação da variável resposta para que o ajuste fosse ideal.
+
+
+
+## Modelo escolhido
+
+
+Descobrimos que o modelo que inclui as variaveis massa corporal em grama, sexo e comprimento da nadadeira, é o que melhor se ajusta aos dados com um $R^2$ = 0,4919, que é razoavelmente bom para sugerir uma boa qualidade do ajuste do modelo que tem como variável resposta o logaritmo natural do comprimento do bico do penguim.
+
+$$log(Y) = \beta_0  + \beta_1X_1  + \beta_2X_2 + \beta_3X_3 + \epsilon$$
+Onde Y corresponde ao comprimento do bico em milímetros, $X_1$ massa corporal em
+gramas, $X_2$ sexo, $X_3$ tamanho da nadadeira em milímetros e $\epsilon$ os resíduos.
+
+
+
+## Modelo escolhido
+
+```{r}
+model <- lm(log(dados$bill_length_mm)~dados$body_mass_g + dados$sex + dados$flipper_length_mm)
+summary(model)
+```
+
+Considerando as hipóteses das variáveis explicativas serem ou não significativas, de acordo com os p-valores, ao nível de significância de 5%, temos evidências para rejeitar que as variáveis explicativas e o intercepto são não significativos.
+
+Pela a hipótese da significância do modelo, o p-valor calculado a partir da estatística F mostra que ao nível de significância de 5%, temos evidências para rejeitar que o modelo é não significativo.
+
+O $R^2$ mostra que conseguimos explicar por volta de 47% dos erros do modelo, o que para este presente trabalho é satisfatório para contribuir na sustentação de nossa hipótese inicial de que há uma relação linear entre as variáveis explicativas e a variável resposta.
+
+## Interpretação dos coeficientes do modelo
+
+- Intercepto: Em média, o logaritmo do comprimento do bico é de 3.069 mm.
+
+- Massa corporal em gramas: a cada grama, o logaritmo do comprimento do bico do Gentoo aumenta a uma taxa de 0,00003 mm.
+
+- Sexo: Como fêmeas compoem a referência da variável, o coeficiente indica que o logaritmo do bico das fêmeas é menor em comprimento em -0,02871 mm.
+
+- Comprimento da nadadeira: A cada milímetro da nadadeira o logaritmo do bico do pinguim Gentoo aumenta em 0,002992 mm.
+
+## Análise dos resíduos
+
+Com o modelo ajustado, prosseguimos para verificar as suposições do modelo com gráficos
+e testes.
+
+## Homecedasticidade
+
+Observando o gráfico dos resíduos, é possível notar que os resíduos não aparentam seguir um padrão.
+
+```{r}
+plot(fitted.values(model),rstandard(model),xlab="Valores Ajustados",ylab="Resíduos normalizados")
+```
+
+## Normalidade
+
+Observando o histograma, podemos ver que os resíduos aparentam seguir uma distribuição normal.
+
+
+```{r}
+hist(model$residuals)
+```
+```{r}
+qqnorm(model$residuals, pch = 1, frame = FALSE)
+qqline(model$residuals, col = "steelblue", lwd = 2)
+```
+
+## Linearidade
+
+Usamos o teste de falta de ajuste para verificar a linearidade entre as variáveis resposta e explicativas. A conclusão foi que não há evidências ao nível de 5% de significância para rejeitar a hipótese nula de que o modelo mais simples é adequado aos dados.
+
+```{r, message=FALSE}
+full_model <- lm(log(dados$bill_length_mm) ~., data=dados)
+anova(model, full_model)
+```
+
+## Independência
+
+Temos informações sobre a sequência de coleta dos dados, portanto usaremos o teste de Durbin-Watson para verificar independência entre os erros, onde a hipótese nula é de que os erros não são autocorrelacionados entre si. Como o p-valor da estatística de teste é maior que 0.05, ao nível de significância de 5% não há evidências para rejeitar a hipótese nula, e assim, o modelo respeita mais uma suposição.
+
+```{r, message=FALSE, warning=FALSE}
+library(car)
+car::durbinWatsonTest(model)
+```
+
+## Detectando valores influentes
+
+Observando a tabela com os DFBETAS é possível perceber que não há nenhum valor que ultrapasse o limiar $\frac{2}{\sqrt{118}}$, logo não há de se preocupar com valores influentes alterando o ajuste do modelo.
+
+```{r, message=FALSE, warning=FALSE}
+limiar <- 2/sqrt(118)
+dfbetas <- dfbeta(model)
+dfbetas <- as.data.frame(dfbetas)
+names(dfbetas) <- c("intercept", "body_mass_g", "sex", "flipper_length_mm")
+head(dfbetas) %>%
+  kableExtra::kbl() %>%
+  kableExtra::kable_classic_2(full_width = F)
+```
+
+## Multicolinearidade 
+
+Como os fatores de aumento de variância não são muito altos é seguro afirmar que não temos problemas graves de multicolinearidade seguindo essse modelo.
+
+```{r message=FALSE, warning=FALSE}
+library(DAAG)
+DAAG::vif(model)
+```
+
+## Conclusão
+
+O modelo final apresentou com $R^2$ = 0,4919 um ajuste satisfatório e nos indica uma
+relação logarítmica entre o comprimento do bico do pinguim Gentoo em milímetros e as variaveis sexo, comprimento da nadadeira em milímetros e massa corporal em gramas. Porém, com base nas referências acreditamos ser possível ajustar um modelo linear generalizado com performance significativamente superior ao proposto nesse presente trabalho.
+
+
+## Obrigado!!!
+
+
+![](https://media3.giphy.com/media/UsGtfvAkM63AsaE0wd/giphy.gif?cid=ecf05e47f3gff78z35qg6u7hcxvnyhbf1anw068jz6ghd7qc&rid=giphy.gif&ct=g){width=75%}
+
