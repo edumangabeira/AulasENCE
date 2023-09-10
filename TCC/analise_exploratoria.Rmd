@@ -1,0 +1,101 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+library(PNSIBGE)
+tipo_de_parto_vars <- c("V0001", "S065", "V00291", "S068", "C008", "C009", "VDF004", "C009", "I00404", "D00901", "S114", "S125", "S066", "S06701", "S06702", "S06703", "S118", "S116", "S06701", "S06702", "S06703", "S112", "S128", "S129", "S073", "S074", "S080", "R032", "R037", "S115", "V00291")
+pns2019 <- get_pns(
+    year=2019, 
+   vars=tipo_de_parto_vars, 
+    design=FALSE
+)
+
+save(pns2019, file="pns2019.Rdata")
+```
+
+
+```{r}
+load("pns2019.Rdata")
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(kableExtra)
+tipo_de_parto <- pns2019 %>%
+            dplyr::filter(S065 == 'Sim') %>% 
+            dplyr::filter(S068 == 'Sim') %>% 
+            mutate(idade=cut(C008,
+            breaks = c(15,18,25,30,40,120),
+            labels = c("15 a 17 anos","18 a 24 anos", "25 a 29 anos", "30 a 39 anos", "40 anos ou mais"),
+            ordered_result = TRUE, right = FALSE)) 
+
+```
+
+tipo_de_parto_survey <- svydesign(id=~UPA_PNS, strat=~V0024, weight=~peso_morador_selec, nest=TRUE, 
+                 data=pns2019Ssurvey)
+
+
+
+## Idade
+
+```{r}
+addmargins(table( tipo_de_parto$S115, tipo_de_parto$idade)) %>% kable() %>% 
+  kable_styling(full_width=F)
+```
+
+## Renda
+
+```{r}
+addmargins(table(tipo_de_parto$VDF004, tipo_de_parto$S115)) %>% kable() %>% 
+  kable_styling(full_width=F)
+```
+
+## Cor ou raça
+
+```{r}
+addmargins(table(tipo_de_parto$S115, tipo_de_parto$C009)) %>% kable() %>% 
+  kable_styling(full_width=F)
+```
+
+## Escolaridade
+
+```{r}
+addmargins(table(tipo_de_parto$D00901, tipo_de_parto$S115)) %>% kable() %>% 
+  kable_styling(full_width=F)
+```
+
+## Uso do SUS para realização do parto?
+
+```{r}
+addmargins(table(tipo_de_parto$S114, tipo_de_parto$S115)) %>% kable() %>% 
+  kable_styling(full_width=F)
+```
+
+## Teve complicação durante o parto?
+
+```{r}
+addmargins(table(tipo_de_parto$S125, tipo_de_parto$S115)) %>% kable() %>% 
+  kable_styling(full_width=F)
+```
+
+## Quantos partos a senhora ja teve?
+
+```{r}
+addmargins(table(tipo_de_parto$S066, tipo_de_parto$S115)) %>% kable() %>% 
+  kable_styling(full_width=F)
+```
+
+## Possui plano de saúde ou convênio médico que dá direito a parto?
+
+```{r}
+addmargins(table(tipo_de_parto$I00404, tipo_de_parto$S115)) %>% kable() %>% 
+  kable_styling(full_width=F)
+
+```
+
