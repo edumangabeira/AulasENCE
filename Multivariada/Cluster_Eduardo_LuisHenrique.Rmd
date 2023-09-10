@@ -1,0 +1,344 @@
+---
+title: "Análise Multivariada Clusters"
+author: " Eduardo Freire & Luis Henrique  "
+date: "`r Sys.Date()`"
+output:
+  rmdformats::downcute:
+    self_contained: True
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = F, warning = F)
+set.seed(202010)
+```
+
+## Objetivo
+
+O objetivo deste trabalho é utilizar técnicas de clusterização para encontrar perfis de clientes em um dataset de risco de crédito. 
+
+
+## Descrição dos dados
+
+### Dimensão do dataset
+
+- 30k observações e 16 variáveis. 
+
+### Sumário das variáveis 
+ 
+- "ID": identificação do cliente
+- "LIMIT_BAL": limite de crédito
+- "SEX": sexo           
+- "EDUCATION": escolaridade
+- "MARRIAGE": estado civil
+- "AGE": idade        
+- "PAY_0": status de adimplência em setembro
+- "PAY_2": status de adimplência em agosto
+- "PAY_3": status de adimplência em julho
+- "BILL_AMT1": fatura em setembro
+- "BILL_AMT2": fatura em agosto
+- "BILL_AMT3": fatura em julho
+- "PAY_AMT1": pagamentos anteriores em setembro
+- "PAY_AMT2": pagamentos anteriores em agosto
+- "PAY_AMT3": pagamentos anteriores em julho             
+- "default.payment.next.month": O cliente é bom pagador? 1 - Sim, 0 - Não
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(kableExtra)
+library(readr)
+library(tidyr)
+library(psy)
+library(cluster)
+library(factoextra)
+library(tictoc)
+library(stats)
+library(ggcorrplot)
+library(stringr)
+library(questionr)
+library(AMR)
+library(distances)
+library(tibble)
+require(nnet)
+require(VGAM)
+require(epiDisplay)
+require(MASS)
+credit <- read.csv2("credit.csv", sep=",")
+```
+
+
+## Abordagem
+
+Escolhemos segmentar o estudo da seguinte forma:
+
+1 - Selecionamos apenas o terceiro trimestre do ano de 2005, pois acreditamos que ele pode ser decisivo para os semestres seguintes pensando no risco de inadimplência dos clientes, já que o último semestre do ano costuma ser um período de consumo alto.
+
+2 - Após ler [estudos](https://www.researchgate.net/publication/292010190_Women_in_Taiwan_Social_status_education_and_employment) sobre o mercado de trabalho para mulheres em Taiwan, decidimos analisar apenas as mulheres pois se trata de uma época em Taiwan onde menos de 20% tinham acesso à licença maternidade.
+
+3 - Dessas mulheres escolhemos as que tem menor capacidade para ampliar sua fonte de renda, ou seja, aquelas que tiveram menos acesso à educação e que estão casadas(maior chance de nascer um filho).
+
+4 - Limitamos às mulheres que possuem crédito concedido de até 50 salários mínimos.
+
+
+Isso reduz nosso conjunto a 1880 observações que serão nosso objeto de estudo.
+
+
+```{r}
+credit <- credit %>%
+  dplyr::select(ID, LIMIT_BAL, SEX, EDUCATION, MARRIAGE, AGE, PAY_0, PAY_2, PAY_3, BILL_AMT1, BILL_AMT2, BILL_AMT3, PAY_AMT1, PAY_AMT2, PAY_AMT3, default.payment.next.month) %>%
+  mutate(PAY_0=ifelse(PAY_0 > 0, 1, 0)) %>%
+  mutate(PAY_2=ifelse(PAY_2 > 0, 1, 0)) %>% 
+  mutate(PAY_3=ifelse(PAY_3 > 0, 1, 0)) %>% 
+  filter(AGE > 27) %>% 
+  filter(AGE < 49) %>% 
+  filter(EDUCATION == 3) %>% 
+  filter(MARRIAGE == 1) %>%
+  filter(LIMIT_BAL < 750000) %>% # 25 salários mínimos em taiwan(2005)
+  column_to_rownames(var="ID") %>%  
+  dplyr::select(-SEX, -MARRIAGE, -EDUCATION)
+
+head(credit) %>% 
+kable(caption = "Primeiras observações do dataset") %>%
+  kable_styling()
+```
+
+
+## Limpeza dos dados
+
+
+## Valores Faltantes
+
+Como é possível observar na tabela a seguir, não há valores faltantes no dataset e já podemos obter algumas medidas importantes.
+
+```{r}
+summary(credit)
+```
+
+## Análise Exploratória
+
+Como a quantidade de variáveis é grande e são muito diversas, se torna difícil usar gráficos para todas elas. A conclusão mais direta é que é necessário reduzir a dimensionalidade do conjunto e fazer a análise de componentes pricipais, porém também é válido explorar gráficos de algumas variáveis que podem ser importantes para entender o comportamento da clientela
+
+## Limite de crédito
+
+```{r}
+ ggplot(credit, aes(LIMIT_BAL)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("Limite de crédito")
+```
+
+## Adimplência
+
+```{r}
+par(mfrow=c(1, 3))
+
+ ggplot(credit, aes(PAY_3)) + 
+    geom_bar(fill="slateblue", alpha=0.2) + 
+    xlab("Adimplência em julho")
+ 
+ ggplot(credit, aes(PAY_2)) + 
+    geom_bar(fill="slateblue", alpha=0.2) + 
+    xlab("Adimplência em agosto") 
+ 
+ ggplot(credit, aes(PAY_0)) + 
+    geom_bar(fill="slateblue", alpha=0.2) + 
+    xlab("Adimplência em setembro")
+```
+
+
+
+## Matriz de correlação
+
+Buscando entender o relacionamento entre as variáveis numéricas, percebe-se que as variáveis com as mesmas características possuem alta correlação como era de se esperar.Contudo, vale comentar alguns resultados: aparentemente o status de adimplência e o limite de crédito estão correlacionados com o cliente ser ou não bom pagador.
+
+```{r}
+corr <- cor(credit)
+ggcorrplot::ggcorrplot(corr, hc.order = TRUE, type = "lower",
+   lab = TRUE, lab_size = 3)
+```
+
+## Clusterização
+
+Clusterização é útil para delimitar dois ou mais grupos no nosso conjunto de dados e resumir a ánalise dos dados de acordo com as característica de cada grupo.
+
+[K-means e PCA são dois algoritmos intimamente interligados](https://stats.stackexchange.com/questions/183236/what-is-the-relation-between-k-means-clustering-and-pca#:~:text=K%2Dmeans%20is%20a%20least,least%2Dsquares%20cluster%20membership%20vector.) e por conta disso, o resultado do PCA será usado para construir o k-means. Com a redução de dimensionalidade do PCA, o K-means se torna bem menos senvível a mudanças de escala. Como não estamos preocupados mais somente com fins de visualização, podemos usar mais componentes principais para aumentar o capacidade de capturar a variabilidade do conjunto de dados
+
+## Análise de componentes principais
+
+Com a redução de dimensionalidade trazida pelo PCA, poderemos explorar os dados com gráficos que mostram apenas as componentes e trazem a possibilidade de interpretações que capturam melhor a variabilidade do conjunto de dados. Com isso também é possível melhorar a construção do classificador de interesse.
+
+Não é uma tarefa fácil encontrar apenas pela representação gráfica o que as variáveis que indicam, já que são muitas observações e a variância explicada pelos 2 primeiros componentes não é muito alta. Porém, tirando os pontos do gráfico podemos ver que idade e fatura estão no mesmo sentido e direções opostas, o que pode indicar que as mulheres mais jovens gastam mais.
+
+
+```{r}
+pca_result <- credit %>% pca()
+```
+
+```{r}
+ggplot_pca(pca_result, labels_textsize = 2, labels_text_placement = 1.2, points_size = 0.0001, arrows_colour="darkred") +
+  theme(plot.background = element_rect(fill = '#f5ebc4'))
+```
+
+
+```{r}
+ggplot_pca(pca_result, labels_textsize = 2, labels_text_placement = 1.2, points_size = 0.0001, points_alpha = 0.001, arrows_colour="darkred") +
+  theme(plot.background = element_rect(fill = '#f5ebc4'))
+```
+
+
+Como dito anteriormente, a variância dos dados não está sendo tão bem explicada pelos 2 primeiros componentes - Apenas no oitavo componente obtemos pelo menos 90% da variância explicada. Portanto iremos utilizar os 8 componentes mais importantes, sem se ater muito ao seu significado, apenas para melhorar a clusterização.
+
+```{r}
+pca_var <- pca_result$sdev ^ 2
+propve <- pca_var / sum(pca_var)
+plot(cumsum(propve),
+    xlab = "Principal Component",
+    ylab = "Cumulative Proportion of Variance Explained",
+    ylim = c(0, 1), type = "b")
+```
+
+## Clusterização
+
+Utilizamos 3 métodos diferentes perfis dentro desse grupo de clientes selecionadas.
+
+
+```{r}
+pca_data <- pca_result[["x"]][,c(1:8)] 
+```
+
+
+## Número ótimo de clusters
+
+Utilizamos o método da silhueta para escolher o número ótimo de clusters e chegamos à conclusão de que 3 grupos são suficientes tanto para o PAM quanto para o CLARA. Já para o k-means, foram necessários 2 grupos. 
+
+### K-means
+
+```{r}
+par(mfrow=c(1,2))
+fviz_nbclust(pca_data, kmeans, method = "silhouette")+
+  theme_classic()
+
+kmeans_credit <- kmeans(pca_data, centers = 2, nstart=20)
+plot(pca_data, col=kmeans_credit$cluster, xlab="Coordenada 1", ylab="Coordenada 2",)
+text(pca_data, col=kmeans_credit$cluster, cex=.8)
+```
+
+## CLARA
+
+
+```{r}
+fviz_nbclust(credit, clara, method = "silhouette")+
+  theme_classic()
+```
+
+
+
+#### com PCA
+
+```{r}
+clara_cluster <- clara(pca_data, 3, samples = 50, sampsize=120, pamLike = TRUE)
+fviz_cluster(clara_cluster, 
+             palette = c("#00AFBB", "#FC4E07", "#E7B800"), # color palette
+             ellipse.type = "t", # Concentration ellipse
+             geom = "point", pointsize = 1,
+             ggtheme = theme_classic()
+)
+```
+
+#### sem PCA
+
+```{r}
+clara_cluster <- clara(credit, 3, samples = 50, sampsize=120, pamLike = TRUE)
+fviz_cluster(clara_cluster, 
+             palette = c("#00AFBB", "#FC4E07", "#E7B800"), # color palette
+             ellipse.type = "t", # Concentration ellipse
+             geom = "point", pointsize = 1,
+             ggtheme = theme_classic()
+)
+```
+
+## PAM
+
+
+```{r}
+fviz_nbclust(credit, pam, method = "silhouette")+
+  theme_classic()
+```
+
+
+#### com pca
+
+```{r}
+pam_cluster <- pam(pca_data, 3, metric = "euclidean")
+fviz_cluster(pam_cluster, 
+             palette = c("#00AFBB", "#FC4E07", "#E7B800"), # color palette
+             ellipse.type = "t", # Concentration ellipse
+             geom = "point", pointsize = 1,
+             ggtheme = theme_classic()
+)
+```
+
+#### sem pca
+
+```{r}
+pam_cluster <- pam(credit, 3, metric = "euclidean")
+fviz_cluster(pam_cluster, 
+             palette = c("#00AFBB", "#FC4E07", "#E7B800"), # color palette
+             ellipse.type = "t", # Concentration ellipse
+             geom = "point", pointsize = 1,
+             ggtheme = theme_classic()
+)
+```
+
+# Conclusão
+
+Segmentamos o estudo e mesmo assim não encontramos um comportamento totalmente homogêneo dos dados. Ou seja, para avaliar o risco de crédito do recorte demográfico escolhido pode ser necessário buscar variáveis em outras fontes, pois aparentemente existe influências externas que podem não estar sendo explicadas. Por exemplo, a diferença entre os grupos pode ser cultural, proveniente de históricos de saúde distintos ou até mesmo regional. A análise dos clusters foi importante para detectar que talvez não seja suficiente usar apenas as informações do dataset para tentar inferir sobre o risco dessas clientes serem ou não boas pagadoras.
+
+
+## Extra
+
+## Regressão logística
+
+```{r}
+grupos <- as.data.frame(pam_cluster[["clustering"]])
+names(grupos) <- c("grupo")
+final_df <- merge(credit, grupos, by="row.names")[,-1]
+
+grupo_1 <- final_df[final_df$grupo==1,]
+grupo_2 <- final_df[final_df$grupo==2,]
+grupo_3 <- final_df[final_df$grupo==3,]
+```
+
+```{r}
+model <- glm(default.payment.next.month ~ PAY_0 +  PAY_3, data=grupo_1, family = binomial(link="logit"))
+odds.ratio(model)
+```
+
+```{r}
+model <- glm(default.payment.next.month ~ PAY_0 +  PAY_3, data=grupo_2, family = binomial(link="logit"))
+odds.ratio(model)
+```
+
+
+
+
+
+```{r}
+model <- glm(default.payment.next.month ~ PAY_0 +  PAY_3, data=grupo_3, family = binomial(link="logit"))
+odds.ratio(model)
+```
+
+
+
+```{r}
+grupo_s <- c("1", "2", "3")
+a <- data.frame( grupo = grupo_s,
+                 PAY_0_oddsratio=c(2.22803, 4.29609, 6.057447),
+                 PAY_3_oddsratio=c(3.97276 , 2.12080, 2.454426 )
+                )
+kable(a) %>% kable_classic(full_width=F)
+```
+
+
+
+

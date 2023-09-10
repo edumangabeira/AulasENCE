@@ -1,0 +1,270 @@
+---
+title: "Análise Fatorial"
+author: "Eduardo Freire"
+date: "30 de junho de 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+## Objetivo
+
+O objetivo deste trabalho é realizar um análise fatorial do dataset "food" que contém medidas de textura de diferentes tipos de massas(spaghetti, penne, etc). Os dados são simulados, mas com características de um problema industrial. Fonte: Kevin Dunn;(16/5/2022).
+ 
+## Descrição dos dados
+
+### Dimensão do dataset
+
+- 50 linhas e 5 colunas 
+
+### Variáveis 
+ 
+- Oil: (Óleo)porcentagem de óleo na massa 
+- Density: (Densidade) a densidade do produto (quanto maior o número, mais denso o produto) 
+- Crispy:(Crocante) uma medida de crocância, em uma escala de 7 a 15, sendo 15 mais crocante. 
+- Fracture: (Fratura) o ângulo, em graus, através do qual a massa pode ser dobrada lentamente antes de fraturar. 
+- Hardness:(Firmeza) uma ponta afiada é usada para medir a quantidade de força necessária antes que ocorra a ruptura.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(kableExtra)
+library(readr)
+library(tidyr)
+library(psy)
+food <- read.csv2("food.csv") %>% 
+  rename(observation=X)
+```
+
+```{r}
+head(food) %>% 
+kable(caption = "Primeiras observações do dataset") %>%
+  kable_styling()
+```
+
+
+## Limpeza dos dados
+
+```{r}
+summary(food)
+```
+
+Como é possível observar na tabela acima(resultado da função summary() no R), não há valores faltantes no dataset.
+
+
+## Outliers
+
+Entre as variáveis estudadas, apenas a porcentagem de óleo apresenta outliers. Ainda não sabemos o quão relevantes esses pontos são para a análise, portanto vamos investigar quem são esses outliers.
+
+### Óleo, densidade
+
+```{r fig.height=3.5, fig.width=4.5}
+
+par(mfrow=c(1, 2))
+food %>% 
+ggplot(aes(x=Oil)) +  
+  geom_boxplot(fill="slateblue", alpha=0.2)
+
+food %>% 
+ggplot(aes(x=Density)) +  
+  geom_boxplot(fill="slateblue", alpha=0.2)
+```
+
+
+### Crocância, fratura, firmeza
+
+```{r fig.height=3.5, fig.width=3}
+
+par(mfrow=c(1, 3))
+food %>% 
+ggplot(aes(x=Crispy)) +  
+  geom_boxplot(fill="slateblue", alpha=0.2)
+
+food %>% 
+ggplot(aes(x=Fracture)) +  
+  geom_boxplot(fill="slateblue", alpha=0.2)
+
+food %>% 
+ggplot(aes(x=Hardness)) +  
+  geom_boxplot(fill="slateblue", alpha=0.2)
+```
+
+
+## Analisando os resultados
+
+As tabelas abaixo mostram quem são os possíveis outliers da variável que indica a porcentagem de óleo.
+
+
+```{r}
+df_desc <- food %>%
+  select(observation, Oil) %>% 
+  arrange(desc(Oil))
+
+lower_fence <- quantile(food$Oil, 0.25)- 1.5*IQR(food$Oil)
+upper_fence <- quantile(food$Oil, 0.75) + 1.5*IQR(food$Oil)
+
+
+ 
+kable(data.frame("limite superior" = upper_fence, "limite inferior" = lower_fence, row.names = c()), caption = "Limites para valores discrepantes") %>% 
+  kable_styling(full_width = F)
+
+kab_desc <- kable(head(df_desc, n=6), caption = "Outliers à direita da distribuição.") %>%
+  column_spec(1, bold = T, border_right = T) %>%
+  column_spec(2, width = "30em") %>% 
+  kable_styling(full_width = F, bootstrap_options=c("condensed", "striped", "bordered"))
+kableExtra::row_spec(kable_input=kab_desc, row=1:2, bold = T, color = "black", background = "#ffcce6")
+```
+
+Na tabela com os dados mais à direita, temos que os valores estão muito próximos do limite superior, o que nos faz acreditar que não vão alterar a análise tão significativamente. 
+
+```{r}
+# food <- food[!(food$"observation" %in% c("B799", "B776")),]
+```
+
+
+# Análise fatorial
+
+O objetivo principal é dividir o conjunto de dados em k fatores e identificar quem são os fatores que resumem as características sobre os tipos de massa.
+
+
+## Determinação do k
+
+
+Vamos escolher o número de fatores para a realização da análise fatorial.
+
+
+### Teste de hipóteses
+
+De forma simplificada temos o seguinte teste para determinação do k.
+
+$$
+Ho: \text{K fatores são suficientes para resumir os dados.} \\
+H1: \text{K fatores não são suficientes para resumir os dados.}
+$$
+
+Testando para 2 fatores temos:
+
+```{r}
+sapply(1:2, function(f){factanal(food[,-1], factors = f, method ="mle")$PVAL})
+```
+
+Ao nível de significância de 5% não temos evidências para rejeitar a hipótese de 2 fatores serem suficientes para resumir os dados.
+
+
+### Análise gráfica
+
+O screeplot também é uma ferramenta adequada para avaliar o número de fatores adequado para a análise fatorial.
+
+```{r}
+fa <- factanal(food[,-1], factors = 2, method ="mle")
+```
+
+```{r}
+psy::scree.plot(fa$correlation)
+```
+
+Interpretamos o plot da seguinte forma: todos os fatores que tiverem um autovalor associado menor do que 1 são descartados da análise. Portanto, confirmamos o que foi visto no teste de hipóteses, 2 fatores são suficientes para resumir os dados. Mais fatores não são válidos.
+
+
+# Identificação dos fatores
+
+## Unicidade
+
+```{r}
+knitr::kable(t(fa$uniquenesses)) %>% 
+  kable_styling() %>% 
+  column_spec(1:5, width = "30em", background = "#9fd1d4")
+```
+
+Para nenhuma variável a unicidade parece muito alta(todas abaixo de 0.5), por enquanto não temos indícios de que os fatores não explicam bem a variância das variáveis.
+
+## Loadings
+
+```{r}
+knitr::kable(fa$loadings[1:5, 1:2]) %>% 
+  kable_styling()
+```
+
+Observando as cargas, as variáveis óleo, densidade, crocância e fratura são bem explicadas pelo fator 1, e as variáveis crocância, fratura e firmeza são bem explicadas pelo fator 2.
+
+## Comunalidade
+
+```{r}
+knitr::kable(t(apply(fa$loadings^2,1,sum))) %>% 
+  kable_styling() %>% 
+  column_spec(1:5, width = "30em", background = "#e3d3da")
+```
+
+Para nenhuma variável a unicidade parece muito baixa(todas acima de 0.5), então não temos indícios de que os fatores não explicam bem a variância das variáveis.
+
+## SS Loadings
+
+Segundo a regra de Kaiser, como as somas dos quadrados das cargas são maiores que um para os dois fatores, não há nada que indique que um deles deva ser removido.
+
+```{r}
+knitr::kable(t(apply(fa$loadings^2,2,sum))) %>% 
+  kable_styling() %>% 
+  column_spec(1:2, width = "30em", background = "#e3d3da")
+
+```
+
+# Qualidade do modelo
+
+Para avaliar a qualidade do modelo de análise fatorial ajustado, iremos construir a matriz de resíduos.
+
+
+## Matriz de resíduos
+
+Como os valores observados estão quase todos muito próximos de zero, podemos dizer que temos uma boa qualidade do ajuste.
+
+```{r}
+Lambda <-  fa$loadings
+Psi <- diag(fa$uniquenesses)
+S <- fa$correlation
+Sigma <- Lambda %*% t(Lambda) + Psi
+dif_S <- round(S-Sigma,6)
+summary(as.vector(dif_S))
+```
+
+## Estimação dos escores
+
+```{r}
+observation <- food$observation
+scores <-  factanal(food[,-1], factors = 2, method = "mle",scores = "regression")$scores
+dt <-  data.frame(observation,scores)
+ggplot(dt, aes(x=Factor1, y=Factor2)) + geom_text(alpha=.6, size=3, aes(label=observation))
+```
+
+Analisando o gráfico com os escores podemos pegar uma observação de exemplo. A massa B694 se apresenta cargas altas o fator 1 e baixar para o fator 2, mas o que isso quer dizer?
+
+
+# Interpretação dos fatores
+
+## Rotação varimax
+
+Para aumentar a interpretabilidade dos fatores podemos realizar a rotação varimax.
+
+```{r}
+food.fa.varimax <- factanal(food[,-1], factors = 2, rotation = "varimax")
+
+plot(food.fa.varimax$loadings[,1], 
+     food.fa.varimax$loadings[,2],
+     xlab = "Factor 1", 
+     ylab = "Factor 2", 
+     ylim = c(-1,1),
+     xlim = c(-1,1),
+     main = "Rotação Varimax")
+text(food.fa.varimax$loadings[,1]-0.08, 
+     food.fa.varimax$loadings[,2]+0.08,
+      colnames(food[,-1]),
+      col="red", cex=1.3)
+abline(h = 0, v = 0)
+```
+
+
+- Fator 1: Parece explicar a consistência da massa, já que suas cargas mais altas são para densidade e fratura.
+
+- Fator 2: arece explicar a resistência da massa por ter cargas maiores para firmeza e crocância.
+

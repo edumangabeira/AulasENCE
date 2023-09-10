@@ -1,0 +1,542 @@
+---
+title: "usairpollution"
+author: "Eduardo Freire Mangabeira"
+output:
+  html_document:
+    df_print: paged
+---
+
+Poluição do ar em cidades dos EUA
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, echo=FALSE)
+```
+
+## Descrição
+
+o Seguinte dataset reúne dados de poluição do ar de 41 cidades dos EUA.
+
+
+## Formato
+
+- arquivo csv com 41 observações sobre as 7 variáveis.
+
+
+## Dataset
+
+```{r}
+library(readr)
+library(tibble)
+usairpollution <- read_delim("usairpollution.csv", ";", escape_double = FALSE, trim_ws = TRUE)
+names(usairpollution) <- c("city", names(usairpollution)[-1])
+usairpollution$temp <- ifelse((usairpollution$temp)/10 > 10, (usairpollution$temp)/10, usairpollution$temp)
+labeled_usairpollution <- usairpollution %>% column_to_rownames(var="city")
+head(labeled_usairpollution)
+```
+
+## Variáveis
+
+
+```{r}
+
+variaveis <- names(usairpollution)
+
+descricao <- c(
+"Cidade Estadunidense",
+"Teor de SO2 (dióxido de enxofre) do ar em microgramas por metro cúbico.",
+"Temperatura média anual em Fahrenheit.",
+"Número de empresas manufatureiras que empregam 20 ou mais trabalhadores.",
+"Tamanho da população (censo de 1970); em milhares.",
+"Velocidade média anual do vento em milhas por hora.",
+"Precipitação média anual em polegadas.",
+"Número médio de dias com precipitação por ano.")
+
+dt <- data.frame(variaveis, descricao)
+names(dt) <- c("Variáveis", "Descrição")
+
+library(kableExtra)
+
+kable(dt) %>%
+  column_spec(1, bold = T, border_right = T) %>%
+  column_spec(2, width = "30em") %>%
+  kable_styling()
+```
+
+## Objetivo
+
+A concentração média anual de dióxido de enxofre, em microgramas por metro cúbico, é uma medida da poluição do ar em cidades. A questão de interesse aqui é quais ou como os aspectos do clima e da ecologia humana medidos pelas outras seis variáveis influenciam a poluição. Além disso, gostaríamos de saber se é possível encontrar uma boa predição para poluição caso sejam analisadas novas cidades ou para as mesmas cidades em outro período de tempo.
+
+Já se conhece muito sobre fenômenos de poluição do ar em diversos campos da ciência e muitas vezes nesse documento serão dadas algumas voltas antes de se chegar em conclusões óbvias para os padrões de hoje. O intuito desse trabalho não é tentar "reinventar a roda" e sim testar todo o ferramental de análise multivariada que for possível, trabalhando com a hipótese de que temos um cenário em que a informação é mais escassa e não sabemos ainda quais fatores mais influenciam na poluição do ar. 
+
+
+# Limpeza do dataset
+
+
+## Valores faltantes
+
+```{r}
+summary(usairpollution)
+```
+
+Como é possível observar na tabela acima, não há valores faltantes no dataset.
+
+## Outliers
+
+
+Com boxplots é possível verificar potenciais outliers para cada coluna. Todas as variáveis observados possuem alguns outliers em potencial. Porém, pensando na geografia dos EUA faz sentido que algumas cidades possuam taxas maiores ou menores que outras. As cidades de maior densidade populacional, por exemplo, poderão sobressair em algumas análises, não quer dizer que as observações devam ser retiradas, mas teremos distribuições com caudas mais pesadas. Numa regressão, talvez seja necessário remover pontos de influência apenas para enxergar a relação das variáveis com SO2. Outra alternativa é classificar as cidades em grupos e analisá-los de forma distinta.
+
+
+```{r}
+library(ggplot2)
+```
+
+#### SO2
+
+
+
+```{r}
+ ggplot(usairpollution, aes(SO2)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("Teor de SO2")
+```
+
+#### Temperatura
+
+
+```{r}
+ ggplot(usairpollution, aes(temp)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("Graus em Fahrenheit")
+```
+
+#### Manufatureiras
+
+```{r}
+ ggplot(usairpollution, aes(manu)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("Número de manufatureiras")
+```
+
+#### População
+
+```{r}
+ ggplot(usairpollution, aes(popul)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("População")
+```
+
+#### Vento 
+
+```{r}
+ ggplot(usairpollution, aes(wind)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("Velocidade do vento em milhas por hora")
+```
+
+#### Precipitação média
+
+```{r}
+ ggplot(usairpollution, aes(precip)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("Precipitação média anual em polegadas")
+```
+
+
+#### Dias com precipitação
+
+```{r}
+ ggplot(usairpollution, aes(predays)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("Número médio de dias com precipitação por ano.")
+```
+
+
+
+## Analisando os resultados
+
+A tabela abaixo mostra que os outliers do teor de SO2 são cidades populosas. Chicago lidera o ranking e é uma das maiores cidades americanas, Providence em segundo é a cidade mais populosa de Rhode Island e Filadélfia é a maior cidade da Pensilvânia. Porém, cidades grandes como Detroit, Baltimore e Dallas não ficaram no topo da lista, então população não deve ser o único fator que influencia na taxa de poluentes.
+
+
+```{r}
+library(dplyr)
+pollution_df <- usairpollution %>% 
+  select(city, SO2) %>%
+  arrange(desc(SO2))
+
+kable(head(pollution_df, n=4)) %>%
+  column_spec(1, bold = T, border_right = T) %>%
+  column_spec(2, width = "30em") %>%
+  kable_styling()
+
+```
+
+
+```{r}
+library(dplyr)
+pollution_df <- usairpollution %>% 
+  select(city, popul) %>%
+  arrange(desc(popul))
+
+kable(head(pollution_df, n=4)) %>%
+  column_spec(1, bold = T, border_right = T) %>%
+  column_spec(2, width = "30em") %>%
+  kable_styling()
+
+```
+
+
+Se observarmos as tabelas de população e  a com as cidades de maior concentração de indústrias manufatureiras, podemos ver que Filadélfia e Chicago continuam liderando, mas apesar de Detroit estar entre as cidades mais populosas e com mais indústrias, não está entre as mais poluentes.
+
+
+```{r}
+library(dplyr)
+pollution_df <- usairpollution %>% 
+  select(city, manu) %>%
+  arrange(desc(manu))
+
+kable(head(pollution_df, n=4)) %>%
+  column_spec(1, bold = T, border_right = T) %>%
+  column_spec(2, width = "30em") %>%
+  kable_styling()
+
+```
+
+
+
+```{r}
+library(dplyr)
+pollution_df <- usairpollution %>% 
+  select(city, temp) %>%
+  arrange(desc(temp))
+
+kable(head(pollution_df, n=4)) %>%
+  column_spec(1, bold = T, border_right = T) %>%
+  column_spec(2, width = "30em") %>%
+  kable_styling()
+
+```
+
+Como ainda não é possível enxergar com clareza as variáveis que influenciam mais na emissão de poluentes, o próximo passo é investigar fatores climáticos.
+
+
+# Estudo das relações lineares
+
+## Gráfico de dispersão
+
+Como se está interessado em saber a relação de várias variáveis com a variável SO2, os gráficos de dispersão isoladamente podem parecer indicar uma relação de linearidade, o que pode não se sustentar ao se ajustar um modelo de regressão linear múltipla, por exemplo. Um outro problema são os outliers, que prejudicariam um modelo com apenas uma variável. No gráfico abaixo(SO2 x vento) é possível ver que ajustar uma reta faz sentido para a maior parte das observações e parece haver uma relação linear, porém pelo menos 6 cidades ficaram muito distantes dos valores ajustados. Adicionando mais variáveis à análise talvez seja possível mitigar essa discrepância, mas também faria sentido dividir a análise em dois grupos distintos. Por enquanto seguiremos analisando todo o conjunto.
+
+
+```{r}
+ggplot(usairpollution, aes(x=SO2, y=wind)) + 
+    geom_point() +
+    geom_smooth(method=lm, se=FALSE)
+```
+
+
+## Regressão Linear Múltipla
+ 
+Ajustaremos um modelo linear para identificar se as variáveis de estudo influenciam a poluição do ar de forma linear. Como visto acima é preciso tomar cuidado com os gráficos apresentados, pois ao se usar mais de uma variável para explicar a variável SO2 a relação pode ser totalmente distinta.
+
+A escolha inicial é criar um modelo com todas as variáveis para capturar as relações entre as variáveis e o nível de SO2, mas será visto na análise dos resíduos que esse modelo não respeita pelo menos um dos pressupostos de um modelo de regressão linear.
+
+```{r}
+library(MASS)
+usairpollution_data <- usairpollution[-1]
+model <- lm(SO2 ~ ., data=usairpollution_data)
+summary(model)
+```
+
+# Análise dos resíduos
+
+## Normalidade
+
+Caso os resíduos estejam normalmente distribuídos, o gráfico de dispersão dos valores ajustados versus os resíduos deveria mostrar que não há um padrão, os dados devem sugerir aleatoriedade. Pelo gráfico não está claro se há ou não um padrão. 
+
+```{r}
+residuo_student <- rstudent(model)
+    plot(fitted.values(model), residuo_student, ylab="Resíduos Studentizados", xlab = "Valores ajustados", main="Modelo Completo")
+    abline(h=0)
+```
+
+## Teste de Shapiro-Wilk
+
+Podemos confirmar pelo teste de [Shapiro-Wilk](https://pt.wikipedia.org/wiki/Teste_de_Shapiro%E2%80%93Wilk) a suposição de normalidade.
+
+Ao nível de 5% de significância, como o p-valor do teste é menor que 0.05, rejeita-se a hipótese nula de que os erros estão normalmente distribuídos. Com isso um dos pressupostos do modelo é desrespeitado e é necessário ajustar um novo modelo.
+
+```{r}
+shapiro.test(residuo_student)
+```
+
+
+## Correlação entre as variáveis
+
+Avaliar a correlação entre as variáveis pode ser um bom começo para escolher as variáveis explicativas que irão compor o novo modelo de regressão linear múltipla. A matriz de correlação sugere que número de manufatureiras, tamanho da população e número médio de dias com precipitação são candidatas para as variáveis explicativas, pois são as correlações mais altas. 
+
+```{r}
+library(ggcorrplot)
+corr <- cor(usairpollution_data)
+ggcorrplot::ggcorrplot(corr, hc.order = TRUE, type = "lower",
+   lab = TRUE)
+
+```
+
+
+## Seleção de um novo modelo
+
+Para encontrar um novo modelo linear mais adequado é possível usar um método de seleção que encontre as variáveis que em conjunto melhor explicam o modelo. Escolhi o método de regressão Stepwise para selecionar as variáveis antes de ajustar o modelo. As variáveis obtidas utilizando o método parecem corroborar com o que foi encontrado na matriz de correlação. Esse método é usado por praticidade, porém possui alguns impeditivos que normalmente o inviabilizam, por exemplo: $R^2$ enviesado para cima, intervalos de confiança estreitos demais e problemas de multicolinearidade vão além do aceitável.
+
+
+```{r}
+library(MASS)
+empty_model <- lm(SO2~1, data = usairpollution_data)
+step(empty_model,scope=list(lower=empty_model,upper=model),trace=TRUE,test="F")
+```
+
+
+## Novo modelo
+
+As variáveis escolhidas pelo método foram "Número de empresas manufatureiras que empregam 20 ou mais trabalhadores", "Tamanho da população (censo de 1970) em milhares" e "Precipitação média anual em polegadas". Com exceção da última, as variáveis selecionadas são as que possuem a maior correlação com o nível de SO2. A precipitação média anual e o número médio de dias com precipitação podem ser vistas uma como função da outra, por isso ainda sim parece razoável a escolha da primeira, apesar da correlação com SO2 ser menor. Outro resultado que faz sentido: os coeficientes do modelo são maiores para as variáveis com correlação mais forte em relação a SO2.
+
+```{r}
+library(MASS)
+new_model <- lm(SO2~precip+popul+manu, data = usairpollution_data)
+summary(new_model)
+```
+
+Para um nível de significância de 5%, todas as variáveis são significativas, então vamos prosseguir com a análise dos resíduos.
+
+## Análise dos resíduos
+
+## Normalidade
+
+Parece que os resíduos não estão distribuídos aleatoriamente, indicando a quebra da suposição de normalidade.
+
+```{r}
+residuo_student <- rstudent(new_model)
+    plot(fitted.values(new_model), residuo_student, ylab="Resíduos Studentizados", xlab = "Valores ajustados", main="Modelo atualizado" )
+    abline(h=0)
+```
+
+## Teste de Shapiro-Wilk
+
+Ao nível de 5% de significância, como o p-valor do teste é menor que 0.05, rejeita-se a hipótese nula de que os erros estão normalmente distribuídos. Novamente o ajuste desrespeitou uma das suposições de um modelo linear, esgotando mais uma opção.
+
+```{r}
+shapiro.test(residuo_student)
+```
+
+
+## Regressão Ridge, Lasso
+
+Antes de remover valores influentes, agrupar os dados, ainda existe ainda outra possibilidade que é usar [Regressão Ridge](https://en.wikipedia.org/wiki/Ridge_regression) e/ou [Regressão Lasso](https://en.wikipedia.org/wiki/Lasso_(statistics)). Porém, é de se imaginar que um novo método não vai ser capaz de explicar bem o fenômeno por conta dos valores influentes presentes nos dados analisados conjuntamente.
+
+```{r}
+library(MASS)
+library(lmridge)
+ridge_model <-lmridge(SO2 ~ precip+popul+manu, usairpollution_data, lambda = seq(0, .4, 1e-3))
+summary(ridge_model)
+
+
+```
+
+## Análise dos resíduos
+
+## Normalidade
+
+```{r}
+plot(fitted(ridge_model),residuals(ridge_model), ylab="Resíduos", xlab = "Valores ajustados", main="Modelo atualizado (Ridge)" )
+    abline(h=0)
+```
+
+Ao nível de 5% de significância, como o p-valor do teste é menor que 0.05, rejeita-se a hipótese nula de que os erros estão normalmente distribuídos. Nosso modelo continua não respeitando um pressuposto, mesmo sendo um modelo mais sofisticado. 
+
+```{r}
+shapiro.test(residuals(ridge_model))
+```
+
+## Valores influentes
+
+Vamos tentar outras abordagens, mas antes vamos observar os valores influentes. A métrica VIF acima de 10 para dois coeficientes pode indicar um problema de multicolinearidade no modelo ajustado.
+
+
+```{r}
+vif(ridge_model)
+```
+
+## Uma nova proposta
+
+Se não levássemos em conta a violação dos pressupostos, o modelo acima parece ter um {R^2=0.6303} satisfatório(bem explicativo), mas possui sérios problemas de multicolinearidade identificados pela métrica VIF. Será que é possível melhorar a análise? 
+
+Uma revisão bibliográfica talvez indique que os modelos utilizados não são lineares, ou ainda que de fato são lineares e existem algumas variáveis específicas que melhoram o ajuste.
+
+Antes de buscar artigos com essas informações podemos separar a análise em grupos usando um algoritmo de classificação. Assim iremos repetir os processos anteriores de ajustar um modelo de regressão para cada um dos grupos, porém já utilizando os métodos mais poderosos(Ridge ou Lasso). No final, se fizer sentido, já teríamos uma análise completa sem a necessidade inicial de incorporar informação de fora aos dados, bastaria comparar as variáveis selecionadas nos dois grupos, suas influências e tomar conclusões.
+
+
+Contudo, ainda podemos avaliar o conjunto de dados de outras formas que vão também auxiliar o outro objetivo - predição -.
+
+
+# Um preditor para poluição
+
+Selecionar as variáveis que de fato eram importantes para ajustar um modelo foi uma das situações mais recorrentes na análise de regressão feita anteriormente. As métricas de avaliação do modelo frequentemente indicavam multicolinearidade. Por exemplo, duas variáveis falam sobre o mesmo fenômeno(precipitação de chuva), porém de perspectivas distintas, então qual delas selecionar? Não é uma pergunta com uma resposta óbvia, mas existem outros métodos importantes para chegar a respostas mais concretas e para construir um preditor faremos algumas análises gráficas a partir deles. Podemos inicialmente usar a análise de componentes principais(PCA) para reduzir o número de variáveis(perdendo algum nível de informação). 
+
+
+## Análise de componentes principais
+
+Repare que na análise inicial precisamos de muitos boxplots para representar a distribuição de cada variável em relação à variável resposta. Com a redução de dimensionalidade trazida pelo PCA, poderemos explorar os dados com gráficos que mostram apenas as componentes e trazem a possibilidade de interpretações que capturam melhor a variabilidade do conjunto de dados. Com isso, além de pensar na construção do preditor de interesse, também é possível melhorar a análise de regressão feita anteriormente.
+
+As variáveis "Manufatureiras" e "População" possuem mesma direção e sentido, além de estarem muito próximas, o que pode indicar que na análise de regressão poderíamos ter escolhido apenas uma delas para evitar os problemas de multicolinearidade. Faz sentido pensar que o número de fábricas aumenta a população de uma cidade por aumentar a oferta de empregos. Algo similar ocorre com as variáveis "precipitação média anual" e "número médio de dias com precipitação", mas nesse caso não é tão claro escolher qual delas explicaria melhor a poluição, portanto não há problema da escolha inicial ser arbitrária.
+
+É nítido pela representação gráfica que as variáveis que indicam fatores humanos e fatores climáticos estão bem separadas umas das outras.
+
+
+```{r}
+library(stats)
+library(AMR)
+pca_result <- usairpollution %>% pca(temp, manu, popul, wind, predays, precip)
+```
+
+```{r}
+ggplot_pca(pca_result, labels_textsize = 2, labels_text_placement = 1.2, points_size = 1, points_alpha = 0.35)
+```
+
+
+## Multidimensional Scaling(MDS)
+
+Podemos também encontrar uma forma de medir as distâncias entre as características das cidades reduzindo a dimensionalidade para duas componentes com o método MDS. Como nossos dados são quantitativos, o método clássico do algoritmo é o mais adequado.
+
+O gráfico nos ajuda a ilustrar o quão distintas entre si são as cidades.
+
+```{r}
+mds <- cmdscale(dist(scale(labeled_usairpollution[,-1])), k=7, eig=T)
+x_mds <- mds$points[,1]
+y_mds <- mds$points[,2]
+plot(x_mds, y_mds, xlab="Coordenada 1", ylab="Coordenada 2",
+  main="MDS", type="n")
+text(x_mds, y_mds, labels = row.names(labeled_usairpollution), cex=.7)
+```
+
+Repare que algumas cidades possuem características muito similares e parecem pertencer a grupos. Porém, vale lembrar que o MDS reduz a dimensionalidade "d" dos dados para $d=2$ e isso muda qualquer interpretação além da formação de grupos que estamos analisando, além de ser um método sensível à escala dos dados.
+
+
+## T-distributed stochastic neighbor embedding(t-SNE)
+
+O t-SNE também permite uma visualização de dados com alta dimensionalidade ao reduzi-la para $d=2$ ou $d=3$. Sua vantagem também é permitir visualizar grupos, mas com o t-SNE as diferenças ficam muito mais nítidas, o que pode ser positivo para melhor identificar quais características mais aproximam as cidades, porém temos poucas observações e essa não será a abordagem mais desejada para os objetivos do trabalho.
+
+```{r}
+set.seed(2020101114)
+library(Rtsne)
+tsne <- Rtsne(scale(labeled_usairpollution[,-1]), dims = 2, perplexity=2)
+x_tsne <- tsne$Y[,1]
+y_tsne <- tsne$Y[,2]
+plot(x_tsne, y_tsne, xlab="Coordenada 1", ylab="Coordenada 2",
+  main="t-SNE", type="n")
+text(x_tsne, y_tsne, labels = row.names(labeled_usairpollution), cex=.7)
+```
+
+## Classificação
+
+Tanto para a tarefa de construir o preditor quando a de encontrar uma relação linear, tivemos o problema das cidades serem muito distintas. O algoritmo k-means é útil para delimitar dois ou mais grupos no nosso conjunto de dados e resumir a ánalise principal em análises menores. Esperamos chegar às mesmas conclusões após essa divisão.
+
+[K-means e PCA são dois algoritmos intimamente interligados](https://stats.stackexchange.com/questions/183236/what-is-the-relation-between-k-means-clustering-and-pca#:~:text=K%2Dmeans%20is%20a%20least,least%2Dsquares%20cluster%20membership%20vector.) e por conta disso, o resultado do PCA será usado para construir o k-means. Com a redução de dimensionalidade do PCA, o K-means se torna bem menos senvível a mudanças de escala. Como não estamos preocupados mais somente com fins de visualização, podemos usar mais componentes principais para aumentar o capacidade de capturar a variabilidade do conjunto de dados:
+
+```{R}
+summary(pca_result)
+```
+
+
+O resultado da tabela acima nos mostra que com 4 componentes é possível explicar até 93% da variância do conjunto de dados, e com 3 podemos explicar 80%.
+
+
+## 3 clusters
+
+Separando em grupos temos a classificação dada pelo gráfico abaixo. Como temos uma quantidade pequena de observações para este tipo de análise, Filadélfia e Chicago formaram um grupo com apenas as duas cidades, o que comprometeria a análise de regressão desse grupo(apenas duas observações). Vamos reduzir o número de clusters para 2 e reavaliar os grupos.
+
+```{r}
+library(e1071)
+pca_data <- pca_result[["x"]][,c(1:4)] 
+rownames(pca_data) <- rownames(labeled_usairpollution)
+kmeans_pollution <- kmeans(pca_data, centers = 3, nstart=20)
+plot(pca_data, col=kmeans_pollution$cluster, xlab="Coordenada 1", ylab="Coordenada 2",)
+text(pca_data, col=kmeans_pollution$cluster, labels = row.names(labeled_usairpollution), cex=.8)
+```
+
+## 2 clusters
+
+
+Agora temos dois grupos,que apesar de terem alguns pontos mais distantes parecem estar bem delimitados.
+
+```{r}
+library(e1071)
+pca_data <- pca_result[["x"]][,c(1:4)] 
+rownames(pca_data) <- rownames(labeled_usairpollution)
+kmeans_pollution <- kmeans(pca_data, centers = 2, nstart=20)
+plot(pca_data, col=kmeans_pollution$cluster, xlab="Coordenada 1", ylab="Coordenada 2",)
+text(pca_data, col=kmeans_pollution$cluster, labels = row.names(labeled_usairpollution), cex=.8)
+```
+
+# 1 - Relação linear
+
+Com os grupos separados, vamos tentar ajustar retas a cada um deles novamente.
+
+```{r}
+grupos <- as.data.frame(kmeans_pollution[["cluster"]])
+names(grupos) <- c("grupo")
+final_df <- merge(labeled_usairpollution, grupos, by="row.names")[,-1]
+head(final_df, n=3)
+```
+
+## Regressão no grupo 1
+
+Vamos aproveitar as variáveis que encontramos no melhor modelo, mas com um pequeno ajuste. No PCA vimos que `popul` e `manu` podem ser os responsáveis por problemas de multicolinearidade, então vamos ficar apenas com `manu`.
+
+```{r}
+ridge_model <- lmridge(SO2 ~ precip+manu, final_df[final_df["grupo"]==2,], lambda = seq(0, .4, 1e-3))
+summary(ridge_model)
+```
+
+# Análise dos resíduos
+
+## Normalidade
+
+Caso os resíduos estejam normalmente distribuídos, o gráfico de dispersão dos valores ajustados versus os resíduos deveria mostrar que não há um padrão, os dados devem sugerir aleatoriedade. Pelo gráfico não está claro se há ou não um padrão. 
+
+```{r}
+residuo_student <- rstudent(model)
+    plot(fitted.values(model), residuo_student, ylab="Resíduos Studentizados", xlab = "Valores ajustados", main="Modelo Completo")
+    abline(h=0)
+```
+
+## Teste de Shapiro-Wilk
+
+Podemos confirmar pelo teste de [Shapiro-Wilk](https://pt.wikipedia.org/wiki/Teste_de_Shapiro%E2%80%93Wilk) a suposição de normalidade.
+
+Ao nível de 5% de significância, como o p-valor do teste é menor que 0.05, rejeita-se a hipótese nula de que os erros estão normalmente distribuídos. Com isso um dos pressupostos do modelo é desrespeitado e é necessário ajustar um novo modelo.
+
+```{r}
+shapiro.test(residuo_student)
+```
+
+
+## Regressão no grupo 2
+
+```{r}
+```
+
+
+
+# 2 - Preditor
+
+## Validação
+
+Como podemos validar os modelos que acabamos de criar? No caso da regressão só estávamos interessados em estudar as relações lineares entre os fatores climáticos, de intervenção humana e o nível de poluição em cidades americanas. E se tivéssemos novas observações(cidades)? Nosso modelo ainda seria útil? Para construir o preditor linear é interessante separar um conjunto para treinar o modelo e outro para testar. O ideal seria desde o início ter separado o dataset nesses conjuntos para não trazer vieses para a análise, mas como esse processo de descoberta faz parte desse trabalho vamos desconsiderar isso por agora e algumas análises considerando essa nova perspectiva.
+
+
+```{r}
+treino <- 1
+teste <- 2
+```
+
+
+
+
