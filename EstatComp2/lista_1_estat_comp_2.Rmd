@@ -1,0 +1,23 @@
+---
+title: "Lista 1 - Estatística Computacional 2"
+output: html_notebook
+---
+
+## Método Congruencial Linear
+
+```{r}
+random_sequence_generator <- function(size, x, a, c, M) {
+    random_sequence = c()
+    while (size > 0){
+        x <- (a * x + c) %% M
+        # Uniform Distribution(0,1)
+        random_number = x/M
+        random_sequence <- c(random_sequence, random_number)
+        size <-  size - 1
+    }
+    return(random_sequence)
+}
+
+random_sequence_generator(10, 1111, 1373, 16807, 128)
+```
+
