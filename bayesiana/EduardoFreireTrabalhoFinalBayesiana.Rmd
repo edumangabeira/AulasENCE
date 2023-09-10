@@ -1,0 +1,658 @@
+---
+title: "Inferência Bayesiana"
+runningheader: "Trabalho Final" # only for pdf output
+subtitle: "Trabalho Final" # only for html output
+author: "Eduardo Freire Mangabeira"
+date: "5 de janeiro 2023"
+output:
+  tufte::tufte_html: default
+  tufte::tufte_handout:
+    citation_package: natbib
+    latex_engine: xelatex
+  tufte::tufte_book:
+    citation_package: natbib
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'), echo=TRUE, warning=FALSE, message=FALSE)
+library(ggplot2)
+library(dplyr)
+library(broom)
+library(kableExtra)
+library(coda)
+library(forecast)
+require(gridExtra)
+library(readr)
+options(htmltools.dir.version = FALSE)
+```
+
+
+```{r}
+set.seed(20201011)
+```
+
+## Exercício 1
+
+### Método de aceitação-rejeição
+
+#### densidade
+
+$$
+\Big(\frac{1}{y!}\Big)\lambda^y\exp(-\lambda)
+$$
+
+#### priori
+
+$$
+\frac{1}{\lambda}\Big(\sqrt{\frac{2}{pi}}\Big)\exp\Big(-\frac{ln(\lambda)^2}{2}\Big)
+$$
+
+
+
+```{r}
+aceitos <- 1  
+iteracao <- 1
+N <- 1000
+M <- 0.1
+lambda_y <- numeric(N)
+
+f_poisson <- function(y, lambda){
+  return (1/factorial(y))*((lambda^(y))*exp(-lambda))
+}
+
+f_poisson_likelihood <- function(y, lambda, n){
+  return (1/prod(factorial(y)))*((lambda^(sum(y)))*exp(-(n)*lambda))
+}
+
+priori_log_normal <- function(lambda){
+  return (1/lambda*(sqrt(2*pi)))*(exp(-(ln(lambda)^2)/2))
+}
+
+y_lambda <- rpois(1:N, M)
+
+while(iteracao < N) {
+    lambda <- rlnorm(1)
+    razao_aceitacao <- (f_poisson(y_lambda[iteracao], lambda))/M*(priori_log_normal(lambda))
+    # razao_aceitacao <- (f_poisson(y_lambda[iteracao], lambda))/f_poisson_likelihood(y_lambda[iteracao], lambda, N)
+    if (lambda <= razao_aceitacao) {
+        lambda_y[iteracao] <- lambda
+        aceitos <- aceitos + 1
+    }
+    iteracao <- iteracao + 1
+}
+
+print(aceitos)
+print(c("taxa de aceitacao", aceitos/N))
+plot(density(lambda_y))
+```
+
+
+### MCMC
+
+$$p(Y|\lambda) = \frac{\lambda^{\sum^{n}_{i=1} Y_i-1}\exp(-\frac{2n\lambda + (ln\lambda)^2}{2})}{\int^{\infty}_{0} \lambda^{\sum^{n}_{i=1} Y_i-1} \exp(-\frac{2n\lambda + (ln\lambda)^2}{2})d\lambda} $$ 
+
+$$E[\lambda|Y] =  \frac{\int^{\infty}_{0} \lambda^{2\sum^{n}_{i=1} Y_i-1}\exp(-\frac{2n\lambda + (ln\lambda)^2}{2})d\lambda}{\int^{\infty}_{0} \lambda^{\sum^{n}_{i=1} Y_i-1} \exp(-\frac{2n\lambda + (ln\lambda)^2}{2})d\lambda}$$
+
+```{r}
+aceitos <- 1  
+iteracao <- 1
+phi <- rlnorm(N)
+i <- 1
+q1 <- c()
+q2 <- c()
+for(i in 1:N){
+  q2[i] <- (phi[i]^(sum(y_lambda)-1)*exp((-2*length(y_lambda)*phi[i]-log(phi[i]^2))/2))/dlnorm(phi[i])
+  q1[i] <- phi[i]*q2[i]
+}
+
+sum(q1)/sum(q2)
+```
+
+Logo,
+
+
+$$E[\lambda|Y] \approx  0.089$$
+
+## Exercício 2
+
+$$Y\sim N(\beta_0+\beta_1X,\phi^{-1})$$
+$$\theta=(\beta_0, \beta_1, \phi)$$
+$$\beta_i \sim N(a_i, b_i), i = 0, 1$$
+
+$$\phi \sim Gama(c,d)$$
+
+### Contas
+
+$$p(Y|\theta)=\prod^{n}_{i=1} p(y_i|\theta) = \Big(\frac{\phi}{2\pi}\Big)^{\frac{n}{2}} \exp\Big({-\frac{\phi}{2}} \sum^{n}_{i=1}(Y_i-\beta_0-\beta_1X_i)\Big)$$
+
+$$p(\theta|Y) \propto \Big(\frac{\phi}{2\pi}\Big)^{\frac{n}{2}} \exp\Big({-\frac{\phi}{2}} \sum^{n}_{i=1}(Y_i-\beta_0-\beta_1X_i)^2\Big) (b_o)^{\frac{n}{2}}\exp\Big(-\frac{1}{2b_0}(\beta_0-a_0)^2\Big) (b_1)^{\frac{n}{2}}\exp\Big(-\frac{1}{2b_1}(\beta_1-a_1)^2\Big) \phi^{c-1}exp(-d\phi)$$
+
+
+
+## Condicional de Beta zero
+
+
+$$p(\beta_0|\beta_1, \phi,Y) \propto \exp\Big({-\frac{\phi}{2}} \sum^{n}_{i=1}(Y_i-\beta_0-\beta_1X_i)^2\Big) \exp\Big(-\frac{1}{2b_0}(\beta_0-a_0)^2\Big) $$
+$$\propto \exp\Big({-\frac{\phi}{2}} \sum^{n}_{i=1}(Y_i^2-2\beta_0Y_i + \beta_0^2-2(Y_i-\beta_0)(\beta_1x_i)+\beta_1^2X_i^2) \Big) $$
+$$\propto \exp\Big({-\frac{1}{2}} (2\beta_0\phi\sum^{n}_{i=1}Y_i + n\beta_0^2\phi-2\phi\beta_0\beta_1\sum^{n}_{i=1}x_i+\frac{a_0}{b_0}) \Big) $$
+
+
+$$\propto \exp\Bigg({-\frac{1}{2(\frac{b_0}{nb_0\phi + 1})}} \Bigg(\beta_0^2 - 2\beta_0\Bigg(\frac{b_0(\sum^{n}_{i=1}Y_i -\phi\beta_1\sum^{n}_{i=1}x_i+\frac{a_0}{b_0})}{nb_0\phi + 1}\Bigg)\Bigg)\Bigg) $$
+Núcleo de uma Normal com parâmetros:
+
+$$\beta_0|\beta_1, \phi,Y \sim N\Big(\frac{b_0(\sum^{n}_{i=1}Y_i -\phi\beta_1\sum^{n}_{i=1}x_i+\frac{a_0}{b_0})}{nb_0\phi + 1}, \frac{b_0}{nb_0\phi + 1}\Big)$$
+
+## Condicional de Beta um
+
+
+$$p(\beta_1|\beta_0, \phi,Y) \propto \exp\Big({-\frac{\phi}{2}} \sum^{n}_{i=1}(Y_i-\beta_0-\beta_1X_i)^2\Big) \exp\Big(-\frac{1}{2b_1}(\beta_1-a_1)^2\Big) $$
+
+$$\propto\exp\Big({-\frac{1}{2}} \beta_i^2\Big(\frac{b_1\sum^{n}_{i=1}x_i^2\phi+1}{b_1}\Big)- 2\beta_1(\phi\sum^{n}_{i=1}X_iY_i -\phi\beta_0\sum^{n}_{i=1}x_i+\frac{a_1}{b_1}))\Big)$$
+Núcleo de uma Normal com parâmetros:
+
+$$\beta_1|\beta_0, \phi,Y\sim N\Bigg(\frac{b_1(\phi\sum^{n}_{i=1}X_iY_i -\phi\beta_0\sum^{n}_{i=1}x_i+\frac{a_1}{b_1}))}{b_1\sum^{n}_{i=1}x_i^2\phi+1},\frac{b_1}{b_1\sum^{n}_{i=1}x_i^2\phi+1}\Bigg)$$
+
+## Condicional de Phi
+
+$$p(\phi|\beta_1, \beta_0,Y) \propto \phi^{\frac{n}{2}+c-1}\exp-\phi\Bigg(\frac{\sum^{n}_{i=1}(Y_i-\beta_0-\beta_1X_i)^2}{2}+d\Bigg)$$
+
+$$\phi|\beta_1, \beta_0,Y \propto Gama\Bigg(\frac{n}{2}+c, \frac{\sum^{n}_{i=1}(Y_i-\beta_0-\beta_1X_i)^2}{2}+d\Bigg)$$
+
+### Simulação dos dados
+
+```{r}
+x <- rnorm(1000)
+beta0 <- 1
+beta1 <- 1
+phi <- 2
+y <- rnorm(1000, beta0+beta1*x, sqrt(1/phi))
+```
+
+### Atribuição dos hiperparâmetros
+
+```{r}
+a0 = 1
+b0 = 1
+a1 = 2
+b1 = 2
+c = 2
+d = 2
+```
+
+Escolhi inicialmente valores baixos para os hiperparâmetros porque acredito que
+por conta disso o algoritmo pode convergir mais rápido.
+
+
+### Algoritmo de Gibbs
+
+```{r}
+# inicialização das variáveis e valores iniciais
+beta_hat0 <- c(2)
+beta_hat1 <- c(3)
+phi_hat <- c(2)
+
+iteracoes <-3000
+n <- length(y)
+
+# amostragem das condicionais
+for(i in 2:iteracoes){
+  
+  beta_hat0[i]  <-rnorm(
+    1,
+    b0*(phi_hat[i-1]*sum(y)-beta_hat1[i-1]*sum(x)+(a0/b0))/(n*b0*phi_hat[i-1]+1), 
+    sqrt(b0/(n*b0*phi_hat[i-1]+1))
+    )
+  
+  beta_hat1[i] <- rnorm(
+    1,
+    b1*(phi_hat[i-1]*sum(x*y)-phi_hat[i-1]*sum(x)*beta_hat0[i]+a1/b1)/(b1*sum(x^2)*phi_hat[i-1]+1), 
+    sqrt(b1/(b1*sum(x^2)*phi_hat[i-1]+1))
+  )
+  
+  phi_hat[i] <- rgamma(
+    1,
+    (n/2)+c, 
+    sum(((y-beta_hat0[i]-beta_hat1[i]*x)^2)/2) + d
+    )
+}
+```
+
+### Tratamento da cadeia
+
+Todas as cadeias apresentam decaimento bem acelerado o que indica que não são autocorrelacionadas.
+
+```{r}
+burn_in <- 500
+acf(beta_hat0[burn_in:iteracoes])
+acf(beta_hat1[burn_in:iteracoes])
+acf(phi_hat[burn_in:iteracoes])
+```
+
+Escolhi um espaçamento igual a 20 e comparei duas séries para cada cadeia pelo método de Gelman-Rubin. Na segunda série as cadeias também não são autocorrelacionadas.
+
+```{r}
+thin = 20
+beta_hat0 <- unlist(lapply(beta_hat0[burn_in:iteracoes], function(x){x[seq(1,length(x),by = thin)]}))
+beta_hat1  <- unlist(lapply(beta_hat1[burn_in:iteracoes], function(x){x[seq(1,length(x),by = thin)]}))
+phi_hat  <- unlist(lapply(phi_hat[burn_in:iteracoes], function(x){x[seq(1,length(x),by = thin)]}))
+
+beta_hat02 <- c(4)
+beta_hat12 <- c(5)
+phi_hat2 <- c(6)
+
+# amostragem das condicionais
+for(i in 2:iteracoes){
+  
+  beta_hat02[i]  <-rnorm(
+    1,
+    b0*(phi_hat2[i-1]*sum(y)-beta_hat12[i-1]*sum(x)+(a0/b0))/(n*b0*phi_hat2[i-1]+1), 
+    sqrt(b0/(n*b0*phi_hat2[i-1]+1))
+    )
+  
+  beta_hat12[i] <- rnorm(
+    1,
+    b1*(phi_hat2[i-1]*sum(x*y)-phi_hat2[i-1]*sum(x)*beta_hat02[i]+a1/b1)/(b1*sum(x^2)*phi_hat2[i-1]+1), 
+    sqrt(b1/(b1*sum(x^2)*phi_hat2[i-1]+1))
+  )
+  
+  phi_hat2[i] <- rgamma(
+    1,
+    (n/2)+c, 
+    sum(((y-beta_hat02[i]-beta_hat12[i]*x)^2)/2) + d
+    )
+}
+
+beta_hat02 <- unlist(lapply(beta_hat02[burn_in:iteracoes], function(x){x[seq(1,length(x),by = thin)]}))
+beta_hat12  <- unlist(lapply(beta_hat12[burn_in:iteracoes], function(x){x[seq(1,length(x),by = thin)]}))
+phi_hat2  <- unlist(lapply(phi_hat2[burn_in:iteracoes], function(x){x[seq(1,length(x),by = thin)]}))
+
+gelman.diag(mcmc.list(as.mcmc(beta_hat0),as.mcmc(beta_hat02)))
+gelman.diag(mcmc.list(as.mcmc(beta_hat1),as.mcmc(beta_hat12)))
+gelman.diag(mcmc.list(as.mcmc(phi_hat),as.mcmc(phi_hat2)))
+```
+
+Pelo método de Gelman-Rubin, como todos os valores para as estimativas são menores que 1.1, as cadeias convergem.
+
+### Traços das cadeia
+
+Fazer os gráficos da cadeias adicionando uma linha para o valor verdadeiro. 
+
+```{r}
+par(2,2)
+plot(beta_hat0,type="l") + title(main="Cadeia Beta zero")
+abline(h=beta0,col=2,lwd=2)
+plot(beta_hat1,type="l") + title(main="Cadeia Beta um")
+abline(h=beta1,col=2,lwd=2)
+plot(phi_hat,type="l") + title(main="Cadeia Phi")
+abline(h=phi,col=2,lwd=2)
+```
+
+## Comparações priori x posteriori
+
+Para os Betas e para o phi a priori tem peso muito grande na construção da posteriori e o dados deixam a distribuição muito mais concentrada em torno de um ponto.
+
+## Beta zero priori e posteriori
+
+```{r}
+library(ggplot2)
+dat <- data.frame(dens = c(rnorm(2:2500, a0, b0), beta_hat0[burn_in:(iteracoes)])
+                   , lines = rep(c("priori", "posteriori"), each = 500))
+ggplot(dat, aes(x = dens, fill = lines)) + geom_density(alpha = 0.5) + xlim(c(0.5, 1.5))
+
+```
+
+## Beta um priori e posteriori
+
+```{r}
+dat <- data.frame(dens = c(rnorm(2:2500, a1, b1), beta_hat1[burn_in:(iteracoes)])
+                   , lines = rep(c("priori", "posteriori"), each = 500))
+ggplot(dat, aes(x = dens, fill = lines)) + geom_density(alpha = 0.5) + xlim(c(0.5, 1.5))
+
+```
+
+
+## Phi priori e posteriori
+
+```{r}
+dat <- data.frame(dens = c(rnorm(2:2500, c, d), phi_hat[burn_in:(iteracoes)])
+                   , lines = rep(c("priori", "posteriori"), each = 500))
+ggplot(dat, aes(x = dens, fill = lines)) + geom_density(alpha = 0.5)+ xlim(c(0, 4))
+```
+
+## Estimativas a posteriori
+
+```{r}
+moda <- function(x) {
+  x <- x[!is.na(x)]
+  return(unique(x)[which.max(tabulate(match(x, unique(x))))])
+}
+# perda quadrática
+medias_posteriori <- c(mean(beta_hat0, na.rm = T), mean(beta_hat1, na.rm = T), mean(phi_hat, na.rm = T))
+
+# perda absoluta
+medianas_posteriori <- c(median(beta_hat0, na.rm = T), median(beta_hat1, na.rm = T), median(phi_hat, na.rm = T))
+
+# perda zero um
+modas_posteriori <- c(moda(beta_hat0), moda(beta_hat1), moda(phi_hat))
+parametros <- c(expression("beta_0"),expression("beta_1"),expression("phi"))
+
+# alpha = 0.05
+HPD_inferior <- c(HPDinterval(as.mcmc(beta_hat0))[1],HPDinterval(as.mcmc(beta_hat1))[1], HPDinterval(as.mcmc(phi_hat))[1])
+HPD_superior <- c(HPDinterval(as.mcmc(beta_hat0))[2],HPDinterval(as.mcmc(beta_hat1))[2], HPDinterval(as.mcmc(phi_hat))[2])
+
+data.frame(
+  media=medias_posteriori, 
+  mediana=medianas_posteriori, 
+  moda=modas_posteriori, 
+  HPD_inferior = HPD_inferior,
+  HPD_superior = HPD_superior,
+  row.names = parametros) %>% 
+  kable() %>%
+  kable_styling(full_width = F) 
+```
+
+Os valores estimados estão bem próximos dos valores verdadeiros que foram usados na geração dos dados, e no caso do phi o intervalo HPD está um pouco mais disperso se comparado aos betas.
+
+### Algoritmo com passo de Metropolis
+
+
+A distribuição proposta para $\phi$ foi uma Gama com parâmetros alpha e beta.
+
+```{r}
+beta_hat03 <- c(2)
+beta_hat13 <- c(5)
+phi_metropolis <- c(5)
+
+alpha=18
+beta=3
+aceitacao <- 0
+iterações <- 100000
+
+# amostragem das condicionais
+for(i in 2:iteracoes){
+  
+  beta_hat03[i] <- rnorm(
+    1,
+    b0*(phi_metropolis[i-1]*sum(y)-beta_hat13[i-1]*sum(x)+(a0/b0))/(n*b0*phi_metropolis[i-1]+1), 
+    sqrt(b0/(n*b0*phi_metropolis[i-1]+1))
+    )
+  
+  beta_hat13[i] <- rnorm(
+    1,
+    b1*(phi_metropolis[i-1]*sum(x*y)-phi_metropolis[i-1]*sum(x)*beta_hat03[i]+a1/b1)/(b1*sum(x^2)*phi_metropolis[i-1]+1), 
+    sqrt(b1/(b1*sum(x^2)*phi_metropolis[i-1]+1))
+  )
+  
+  phi_proposto <- rgamma(1, alpha, beta)
+  
+  log_pi_proposto <- (((n/2)+alpha-1)*log(phi_proposto))+(-phi_proposto)*sum(((y-beta_hat03[i-1]-beta_hat13[i-1]*x)^2)/2 + beta)
+  
+  log_pi_proposto_i <- (((n/2)+alpha-1))*log(phi_proposto)+(-phi_proposto)*sum(((y-beta_hat03[i]-beta_hat13[i]*x)^2)/2 + beta)
+
+  numerador_metropolis <- dgamma(phi_metropolis[i-1],alpha,beta,log=T)+ log_pi_proposto
+  denominador_metropolis <-dgamma(phi_proposto,alpha,beta,log=T)+ log_pi_proposto_i
+  log_razao_metropolis <- numerador_metropolis - denominador_metropolis
+    
+  minimo <- min(0, log_razao_metropolis)
+  gerado <- log(runif(1)) 
+  if(minimo >= gerado){
+    phi_metropolis[i] <- phi_proposto
+    aceitacao <- aceitacao + 1 
+  }else{
+      phi_metropolis[i] <- phi_metropolis[i-1]}
+}
+
+aceitacao/iteracoes
+```
+
+A taxa de aceitação está flutuando bastante a cada execução do código, mas normalmente acima de 50%, o que é considerado razoável.
+
+## Exercício 3
+
+## Dados reais
+
+Escolhi um dataset sobre [preços imobiliários em Boston](https://www.kaggle.com/competitions/boston-housing/overview/description). O conjunto de dados permite explorar a relação entre o preço mediano de casas ocupadas pelo proprietário em US$1,000 e  o número médio de cômodos por domicílio.
+
+y: preço mediano de casas\
+
+x: número médio de cômodos
+
+Cada observação corresponde a uma região diferente de Boston.
+
+
+## Análise exploratória
+
+```{r}
+dados <- read_csv("housing.csv")
+```
+
+## Distribuição de preços
+
+Existem muitos outliers pra cima, que provavelmente correspondem às residências de alto padrão presentes nos subúrbios americanos. A mediana está em torno de 20k dólares.
+
+```{r}
+ ggplot(dados, aes(medv)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("(US$1,000)") +
+    ggtitle("Preços medianos de casas ocupadas em US$1,000")
+```
+
+## Número médio de cômodos
+
+O número médio de cômodos por domicílio está mais concentrado entre 6 e 7 cômodos, mas existem muitos outliers.
+
+```{r}
+
+ ggplot(dados, aes(rm)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("quartos") +
+    ggtitle("Número médio de quartos por domicílio")
+```
+
+## Inferências
+
+```{r}
+x <- dados$rm
+beta0 <- 1
+beta1 <- 1
+phi <- 2
+y <- dados$medv
+```
+
+### Atribuição dos hiperparâmetros
+
+```{r}
+a0 = 1
+b0 = 0.05
+a1 = 0
+b1 = 0.02
+c = 1
+d = 1
+```
+
+Dessa vez escolhi hiperparâmetros com valores bem menores, pois não estava conseguindo observar convergência de pelo menos uma cadeia($\phi$).
+
+
+### Algoritmo de Gibbs
+
+
+```{r}
+# inicialização das variáveis e valores iniciais
+beta_hat0 <- c(2)
+beta_hat1 <- c(3)
+phi_hat <- c(2)
+n <- length(y)
+iteracoes <- 10000
+
+# amostragem das condicionais
+for(i in 2:iteracoes){
+  
+  beta_hat0[i]  <-rnorm(
+    1,
+    b0*(phi_hat[i-1]*sum(y)-beta_hat1[i-1]*sum(x)+(a0/b0))/(n*b0*phi_hat[i-1]+1), 
+    sqrt(b0/(n*b0*phi_hat[i-1]+1))
+    )
+  
+  beta_hat1[i] <- rnorm(
+    1,
+    b1*(phi_hat[i-1]*sum(x*y)-phi_hat[i-1]*sum(x)*beta_hat0[i]+a1/b1)/(b1*sum(x^2)*phi_hat[i-1]+1), 
+    sqrt(b1/(b1*sum(x^2)*phi_hat[i-1]+1))
+  )
+  
+  phi_hat[i] <- rgamma(
+    1,
+    (n/2)+c, 
+    sum(((y-beta_hat0[i]-beta_hat1[i]*x)^2)/2) + d
+    )
+}
+```
+
+### Tratamento da cadeia
+
+Todas as cadeias apresentam decaimento bem acelerado o que indica que não são autocorrelacionadas.
+
+```{r}
+burn_in <- 500
+acf(beta_hat0[burn_in:iteracoes])
+acf(beta_hat1[burn_in:iteracoes])
+acf(phi_hat[burn_in:iteracoes])
+```
+
+Escolhi um espaçamento igual a 20 e comparei duas séries para cada cadeia pelo método de Gelman-Rubin. Na segunda série as cadeias também não são autocorrelacionadas.
+
+```{r}
+thin = 20
+beta_hat0 <- unlist(lapply(beta_hat0[burn_in:iteracoes], function(x){x[seq(1,length(x),by = thin)]}))
+beta_hat1  <- unlist(lapply(beta_hat1[burn_in:iteracoes], function(x){x[seq(1,length(x),by = thin)]}))
+phi_hat  <- unlist(lapply(phi_hat[burn_in:iteracoes], function(x){x[seq(1,length(x),by = thin)]}))
+
+beta_hat02 <- c(4)
+beta_hat12 <- c(5)
+phi_hat2 <- c(6)
+
+# amostragem das condicionais
+for(i in 2:iteracoes){
+  
+  beta_hat02[i]  <-rnorm(
+    1,
+    b0*(phi_hat2[i-1]*sum(y)-beta_hat12[i-1]*sum(x)+(a0/b0))/(n*b0*phi_hat2[i-1]+1), 
+    sqrt(b0/(n*b0*phi_hat2[i-1]+1))
+    )
+  
+  beta_hat12[i] <- rnorm(
+    1,
+    b1*(phi_hat2[i-1]*sum(x*y)-phi_hat2[i-1]*sum(x)*beta_hat02[i]+a1/b1)/(b1*sum(x^2)*phi_hat2[i-1]+1), 
+    sqrt(b1/(b1*sum(x^2)*phi_hat2[i-1]+1))
+  )
+  
+  phi_hat2[i] <- rgamma(
+    1,
+    (n/2)+c, 
+    sum(((y-beta_hat02[i]-beta_hat12[i]*x)^2)/2) + d
+    )
+}
+
+beta_hat02 <- unlist(lapply(beta_hat02[burn_in:iteracoes], function(x){x[seq(1,length(x),by = thin)]}))
+beta_hat12  <- unlist(lapply(beta_hat12[burn_in:iteracoes], function(x){x[seq(1,length(x),by = thin)]}))
+phi_hat2  <- unlist(lapply(phi_hat2[burn_in:iteracoes], function(x){x[seq(1,length(x),by = thin)]}))
+
+gelman.diag(mcmc.list(as.mcmc(beta_hat0),as.mcmc(beta_hat02)))
+gelman.diag(mcmc.list(as.mcmc(beta_hat1),as.mcmc(beta_hat12)))
+gelman.diag(mcmc.list(as.mcmc(phi_hat),as.mcmc(phi_hat2)))
+```
+
+Pelo método de Gelman-Rubin, como todos os valores para as estimativas são menores que 1.1, as cadeias convergem.
+
+### Traços das cadeia
+
+```{r}
+par(2,2)
+plot(beta_hat0,type="l") + title(main="Cadeia Beta zero")
+abline(h=beta0,col=2,lwd=2)
+plot(beta_hat1,type="l") + title(main="Cadeia Beta um")
+abline(h=beta1,col=2,lwd=2)
+plot(phi_hat,type="l") + title(main="Cadeia Phi")
+abline(h=phi,col=2,lwd=2)
+```
+
+## Comparações priori x posteriori
+
+As prioris que escolhi acabaram se mostrando muito pesadas.
+
+## Beta zero priori e posteriori
+
+```{r}
+library(ggplot2)
+dat <- data.frame(dens = c(rnorm(2:2500, a0, b0), beta_hat0[burn_in:(iteracoes)])
+                   , lines = rep(c("priori", "posteriori"), each = 500))
+ggplot(dat, aes(x = dens, fill = lines)) + geom_density(alpha = 0.5) +xlim(0.5,1.5)
+
+```
+
+## Beta um priori e posteriori
+
+```{r}
+dat <- data.frame(dens = c(rnorm(2:2500, a1, b1), beta_hat1[burn_in:(iteracoes)])
+                   , lines = rep(c("priori", "posteriori"), each = 500))
+ggplot(dat, aes(x = dens, fill = lines)) + geom_density(alpha = 0.5)  +xlim(-0.5,0.5)
+
+```
+
+
+## Phi priori e posteriori
+
+```{r}
+dat <- data.frame(dens = c(rnorm(2:2500, c, d), phi_hat[burn_in:(iteracoes)])
+                   , lines = rep(c("priori", "posteriori"), each = 500))
+ggplot(dat, aes(x = dens, fill = lines)) + geom_density(alpha = 0.5)  +xlim(-0.00005,0.00005)
+```
+
+## Estimativas a posteriori
+
+```{r}
+moda <- function(x) {
+  x <- x[!is.na(x)]
+  return(unique(x)[which.max(tabulate(match(x, unique(x))))])
+}
+# perda quadrática
+medias_posteriori <- c(mean(beta_hat0, na.rm = T), mean(beta_hat1, na.rm = T), mean(phi_hat, na.rm = T))
+
+# perda absoluta
+medianas_posteriori <- c(median(beta_hat0, na.rm = T), median(beta_hat1, na.rm = T), median(phi_hat, na.rm = T))
+
+# perda zero um
+modas_posteriori <- c(moda(beta_hat0), moda(beta_hat1), moda(phi_hat))
+parametros <- c(expression("beta_0"),expression("beta_1"),expression("phi"))
+
+# alpha = 0.05
+HPD_inferior <- c(HPDinterval(as.mcmc(beta_hat0))[1],HPDinterval(as.mcmc(beta_hat1))[1], HPDinterval(as.mcmc(phi_hat))[1])
+HPD_superior <- c(HPDinterval(as.mcmc(beta_hat0))[2],HPDinterval(as.mcmc(beta_hat1))[2], HPDinterval(as.mcmc(phi_hat))[2])
+
+data.frame(
+  media=medias_posteriori, 
+  mediana=medianas_posteriori, 
+  moda=modas_posteriori, 
+  HPD_inferior = HPD_inferior,
+  HPD_superior = HPD_superior,
+  row.names = parametros) %>% 
+  kable() %>%
+  kable_styling(full_width = F) 
+```
+
+## Interpretando o resultado
+
+Com o $\beta_1$ encontrado, pode-se dizer que, com todo o resto constante, o preço mediano de um domicílio em Boston aumenta em 11,680 dólares a cada novo cômodo.
+
+## Comparando com resultado da inferência clássica
+
+```{r}
+summary(lm(medv ~ rm, data=dados))
+```
+
+No caso clássico, equivalente a assumir prioris pouco informativas, encontrou-se que com todo o resto constante, o preço mediano de um domicílio em Boston aumenta em 9,102 dólares a cada novo cômodo.
+
+
+

@@ -4,3 +4,8 @@
 *.Ruserdata
 *.nb
 *.html
+*.pdf
+*.Rproj
+*.log
+*.PNG
+*.tex
