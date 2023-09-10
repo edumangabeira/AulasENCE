@@ -1,0 +1,741 @@
+---
+title: "Lista 1- Planejamento de experimentos"
+author: "Eduardo Freire mangabeira & Luis Henrique Toledo "
+date: "`r Sys.Date()`"
+output: 
+ rmdformats::readthedown
+---
+
+# Questão 4
+
+Quatro desenhos diferentes para o circuito de um produto eletrônico estão sendo estudados com o objetivo de se comparar a quantidade de ruído presente. Os seguintes dados foram obtidos:
+
+| Desenho do circuito |     |     |     |     |     |
+| :------------------ | :-- | :-- | :-- | :-- | :-- |
+| 1                   | 19  | 20  | 19  | 25  | 18  |
+| 2                   | 82  | 61  | 73  | 54  | 80  |
+| 3                   | 47  | 29  | 28  | 35  | 48  |
+| 4                   | 95  | 46  | 83  | 78  | 99  |
+
+```{r,include=F}
+dados_circuito <- read.table("planexp.txt")
+circuito <- dados_circuito$V1
+ruido <- dados_circuito$V2
+
+library(tidyverse)
+library(ggpubr)
+library(car)
+library(EnvStats)
+library(ggplot2)
+library(dplyr)
+library(hrbrthemes)
+library(ggpubr)
+library(car)
+library(stats)
+```
+
+O intuito é estudar se o tipo de circuito influencia na quantidade de ruído do produto eletrônico, ou seja, testar se as médias de ruído são iguais para todos os circuitos. Para isso iremos trabalhar com a Análise de variãncia a seguir: 
+
+Nosso modelo ANOVA de um fator pode ser escrito da seguinte forma:
+
+$$y_{ij}=\mu +\tau_i+\varepsilon_{ij} = \begin{cases} i=1,2,...,a=4\\j=1,2,...,n=5\end{cases}$$
+
+Onde:
+
+$y_{ij}$ é a quantidade de ruído medida na j-ésima observação do i-ésimo tratamento
+$\mu$ é a média global   
+$\tau_i$ é o efeioto do i-ésimo tratamento(*desenho do circuito*)  
+$\varepsilon{ij}$ é o erro experimental; sabe- se que $\varepsilon{ij}$ são i.i.d e tem distribuição Normal (0,$\sigma^2$)
+
+Estamos analisando se há igualdade entre as médias dos circuitos, para isso testaremos as seguintes hipóteses:
+
+$$H_0:\mu_1=\mu_2=...=\mu_a$$  
+  
+$$H_1:\mu_i\neq\mu_j \text{  para ao menos um par(i, j)}$$
+
+```{r,echo=FALSE}
+dados_circuito <- read.table("planexp.txt")
+circuito <- dados_circuito$V1
+ruido <- dados_circuito$V2
+
+circuito <- as.numeric(circuito)
+```
+
+
+```{r,include=FALSE}
+ggline(dados_circuito, x = "V1", y = "V2",
+       add = c("mean_se", "jitter"), 
+       ylab = "Quantidade de Ruído", xlab = "tipo de circuito",title="Ruído do produto  por tipo de circuito")
+
+ggboxplot(dados_circuito, x = "V1", y = "V2", color = "V1", ylab = "quantidade de Ruído", xlab = "tipo de circuito")
+```
+
+## Tabela ANOVA
+
+```{r,echo=FALSE}
+#Modelo Anova:
+modelo=aov(ruido~factor(circuito))
+
+summary(modelo)
+
+```
+
+Como p-valor < α = 0, 05, Há evidências ao nível de 5% de significância para rejeitar a hipótese de que todas as médias são iguais e concluir que pelo menos 2 tipos de circuito possuem médias de ruídos diferentes.
+
+## Verificação da adequação do modelo
+
+As violações nas suposições do modelo podem ser feitas investigando os resíduos do ajuste, ou seja, é necessário que uma série de pressupostos sejam atendidos, dentre eles:  
+**Normalidade, independência e homocedasticidade** dos resíduos.
+
+### Normalidade
+
+```{r,echo=FALSE}
+eij <- modelo$residuals
+```
+
+#### Gráfico de probabilidade normal dos resíduos padronizados
+
+```{r,echo=FALSE}
+plot(modelo,2)
+```
+
+#### Teste de Shapiro-Wilk
+
+$$H_0: \text{  Os erros possuem distruibuição normal}$$
+$$H_1: \text{  Os erros não possuem distribuição normal}$$
+```{r,echo=FALSE}
+shapiro.test(eij)
+```
+
+Como o p-valor=0.154>0.05 não há evidências ao nível de 5% de significância para rejeitar a hipótese de normalidade dos resíduos.
+  
+
+### Homocedasticidade
+
+```{r,echo=FALSE}
+plot(modelo,1)
+```
+
+Para corroborar com a análise gráfica será feito dois testes para analisar uma possível heterocedasticidade. 
+
+### Teste de Bartlett
+
+É um teste sensível à não-normalidade, porém a normalidade é uma suposição atendida no nosso modelo. Que tem por hipóteses:  
+
+$$H_0:\sigma_1^2=\sigma_2^2=...=\sigma_a^2$$  
+  
+$$H_1:\sigma_i\not\equiv\sigma_j \text{  para ao menos um par(i, j) com  } i\not\equiv j$$
+
+```{r,echo=FALSE}
+bartlett.test(ruido~factor(circuito),dados_circuito)
+```
+
+Como o p-valor=0.014<0.05 há evidências ao nível de 5% de significância de heterocedasticidade dos resíduos.
+  
+### Teste de Levene
+
+É um teste robusto à não-normalidade. Que tem por hipóteses:  
+
+$$H_0:\mu_{d1}=\mu_{d2}=...=\mu_{da}$$  
+
+$$H_1:\text{ Existe alguma diferença}$$
+  
+```{r,echo=FALSE}
+
+leveneTest(ruido~factor(circuito),dados_circuito)
+```
+
+Como o p-valor=0.18>0.05 não há evidências ao nível de 5% de significância de heterocedasticidade dos resíduos.
+
+**Como obtivemos resultados diferentes para a suposição da homocedasticidade, o teste de Bartlett juntamente com a análise dos resíduos padronizados se destacam e encararemos a heterocedasticidade como um problema no nosso ajuste.**
+
+O modelo Anova pressupõe que existe homocedasticidade. Quando esse
+pressuposto não é atendido, utiliza-se uma transformação nos dados para estabilizar a variância.  
+
+## Transformação pelo método empírico
+
+Para investigar a possibilidade de usar uma transformação para estabilizar
+a variância, vamos plotar o gráfico de $log(S_i)$ versus $log(\bar{y_i})$ e ajustar um modelo de regressão linear simples.
+
+
+```{r,echo=FALSE}
+medias.circuito <- with(dados_circuito, tapply(ruido,circuito,mean))
+desvios.circuito<- sqrt(with(dados_circuito, tapply(ruido,circuito,var)))
+plot(log(medias.circuito),log(desvios.circuito))
+
+
+lm(log(desvios.circuito)~log(medias.circuito))
+```
+
+Temos que $\widehat{\alpha} = 1.287$ algo próximo de 1.5, indicando que a transformação ideal que irá
+estabilizar a variância é  $y^\ast = \frac{1}{\sqrt{y}}$.
+
+Aplicamos então a transformação na variável resposta e prosseguimos com
+a análise:
+
+
+```{r,echo=FALSE}
+ruido.star<-1/sqrt(ruido)
+modelo.circuito<-aov(ruido~factor(circuito))
+plot(modelo.circuito,1)
+```
+
+O gráfico de resíduos versus valores ajustados do modelo com a resposta
+transformada se apresenta muito mais comportado e refaremos os testes de Levene de de Bartlett para corroborar com a análise gráfica
+
+```{r,echo=FALSE}
+dados.circuito<-data.frame(circuito,ruido.star)
+bartlett.test(ruido.star~circuito, dados.circuito)
+```
+
+Como o p-valor=0.6164, não há evidências ao nível de 5% de significância para rejeitar a hipótese de homocedasticidade.
+
+```{r,echo=FALSE}
+leveneTest(ruido.star~factor(circuito), dados.circuito)
+
+```
+
+Como o p-valor=0.6115, não há evidências ao nível de 5% de significância para rejeitar a hipótese de homocedasticidade.
+
+
+**Como após a transformação da variável resposta conseguimos não rejeitar a homocedasticidade nos 2 testes, logo, a transformação foi de extrema importância **
+
+É importante reduzir os graus de liberdade do erro em uma unidade, para
+considerar o uso dos dados para estimar o parâmetro α da transformação.
+
+ANOVA com a transformação na variável resposta.
+
+```{r,echo=FALSE}
+summary(modelo.circuito)
+F.value.circuito=(0.03821/3)/(0.00450/15)
+#F.value.circuito
+
+pvalor.testeF.circuito<-1-pf(F.value.circuito,2,11)
+
+paste0("O p-valor final é de ",pvalor.testeF.circuito)
+
+```
+
+Logo, concluímos que o tipo de circuito é significativo para a média do ruído emitido pelo aparelho eletrônico.
+
+## Transformação pelo método de Box-cox
+
+```{r,echo=FALSE}
+geomean = function(x){
+exp(mean(log(x)))
+}
+inc = function(x){
+assign("x", x + 1, envir = .GlobalEnv)
+}
+lambdas = seq(-2,2, 0.25)
+x<-circuito
+y<-ruido
+x = as.factor(x)
+df = data.frame(x, y)
+SQE.lambda = NULL
+for(lambda in lambdas){
+if(lambda == 0){
+df$yt = geomean(y) * log(y)
+}else{
+df$yt = (y^(lambda) - 1) / (lambda * geomean(y)^(lambda - 1))
+}
+SQE.lambda = c(SQE.lambda, summary(aov(yt~x, data = df))[[1]][2,2])
+}
+
+#data.frame(lambdas,SQE.lambda)
+
+plot(lambdas,SQE.lambda,xlim=c(-2,2),ylim=c(1500,3000),type="l",
+main="Gráfico de SQE(lambda) versus lambda")
+
+```
+
+```{r,echo=FALSE}
+pos.min<-which.min(SQE.lambda)
+gl.E<-summary(aov(y~x))[[1]][2,1]
+SQ.star<-SQE.lambda[pos.min]*(1+(qt(0.975,gl.E)^2)/gl.E)
+#SQ.star
+
+plot(lambdas,SQE.lambda,xlim=c(-2,2),ylim=c(1500,3000),type="l",
+main="Gráfico de SQE(lambda) versus lambda com IC de 95%")
+abline(h=SQ.star)
+```
+
+Pelo gráfico, vemos que o valor de lambda maximizado é algo entre -1 e 0.
+
+Utilizando o pacote `EnvStats`:
+
+```{r,echo=FALSE}
+
+boxcox <- boxcox(modelo,optimize=T)
+paste0("Após uso do pacote temos que o valode de lambda é ",boxcox$lambda)
+
+```
+
+Com isso sabemos que a transformação Box-Cox se dá por $y^\ast=y^\lambda$ com isso temos que a transformação ideal para y, uma vez que $\lambda \approx -0.5 \text{ é } \frac{1}{\sqrt{y}}$
+
+### Modelo final ANOVA de um fator  
+
+$$y_{ij}=\frac{1}{\mu^2 +\tau_i^2+\varepsilon_{ij}^2} = \begin{cases} i=1,2,...,a=4\\j=1,2,...,n=5\end{cases}$$
+
+### Onde:
+
+$y_{ij}$ é a quantidade de ruído medida na j-ésima observação do i-ésimo tratammento
+$\mu$ é a média global   
+$\tau_i$ é o efeioto do i-ésimo tratamento (*desenho do circuito*)  
+$\varepsilon{ij}$ é o erro experimental; sabe- se que $\varepsilon{ij}$ são i.i.d e tem distribuição Normal (0,$\sigma^2$)
+### Analisando as suposições após transformação
+
+**Vamos analisar as suposições de normalidade e de homocedasticidade novamente**
+
+### Normalidade 
+
+#### Gráfico de probabilidade normal dos resíduos padronizados
+
+```{r,echo=FALSE}
+plot(modelo.circuito,2)
+```
+
+```{r,echo=FALSE}
+shapiro.test(modelo.circuito$residuals)
+```
+Agora nosso P-valor é de 0.89, um p-valor bem elevado e consequentemente melhorando a suposição de normalidade que antes da transformação tinhámos um p-valor de 0.15
+
+Com isso temos que após a transformação, conseguimos respeitar as suposições do modelo uma vez que a de homocedasticidade era violada anteriormente.
+
+## Tabela ANOVA após transformação
+
+```{r,echo=FALSE}
+
+summary(modelo.circuito)
+```
+
+Como p-valor < α = 0, 05, Há evidências ao nível de 5% de significância para rejeitar a hipótese de que todas as médias são iguais e concluir que pelo menos 2 tipos de circuito possuem médias de ruídos diferentes.
+
+# Questão 5
+
+| Técnica de Mistura |      |      |      |      |
+| :----------------- | :--- | :--- | :--- | :--- |
+| 1                  | 3129 | 3000 | 2865 | 2890 |
+| 2                  | 3200 | 3300 | 2975 | 3150 |
+| 3                  | 2800 | 2900 | 2985 | 3050 |
+| 4                  | 2600 | 2700 | 2600 | 2765 |
+
+A resistência à tensão do cimento está sendo estudada. Em um experimento, quatro técnicas de mistura diferentes foram utilizadas, e a resistência à tensão (em lb/pol2
+) do cimento em cada técnica foi medida, em
+quatro réplicas. Os seguintes dados foram coletados:
+
+tabelinha da lista 
+
+## Gráfico Boxplot para analisar as médias de resistência de cada tipo de mistura
+
+```{r,echo=FALSE,warning=FALSE}
+mistura <- rep(1:4,each=4)
+resistencia <- c(3129, 3000, 2865, 2890,3200, 3300, 2975, 3150,2800, 2900, 2985, 3050,2600, 2700, 2600, 2765)
+quest5 <- data.frame(mistura,resistencia)
+ggboxplot(quest5, x = 'mistura', y = 'resistencia',
+  color = "mistura", ylab = "Resistencia", xlab = "tipo de mistura",add = "mean")
+
+```
+
+É possível pereber uma diferença aparente entre as medianas das resistências, principalmente se compararmos o tipo de mistura 2 com o tipo 4, logo, um possível indício de que as médias não são iguais para todos os tipos de mistura.
+
+### Nosso modelo ANOVA de um fator pode ser escrito da senguinte forma:
+
+$$y_{ij}=\mu_{ij}+\tau_i+\varepsilon_{ij} = \begin{cases} i=1,2,...,a=4\\j=1,2,...,n=4\end{cases}$$
+
+Onde:
+
+$y_{ij}$ é o nível de resistência medida na j-ésima observação do i-ésimo tratammento
+$\mu$ é a média global   
+$\tau_i$ é o efeioto do i-ésimo tratamento( *tipo de mistura*)  
+$\varepsilon{ij}$ é o erro experimental; sabe- se que $\varepsilon{ij}$ são i.i.d e tem distribuição Normal (0,$\sigma^2$)
+
+
+Estamos analisando se há igualdade entre as médias das resistêcias, para isso testaremos as seguintes hipóteses: 
+
+$$H_0:\mu_1=\mu_2=...=\mu_a$$
+
+$$H_1:\mu_i\not\equiv\mu_j \text{  para ao menos um par(i, j)}$$
+
+### A tabela ANOVA 
+
+```{r,echo=FALSE}
+modelo2 <- aov(resistencia~factor(mistura))
+summary(modelo2)
+```
+
+Como o p-valor =0.0004<0.05, há evidências ao nível de 5% de significância para concluir que o tipo de mistura influencia na média de resistência.
+
+## Verificação da adequação do modelo
+
+### Normalidade
+
+```{r,echo=FALSE}
+eij <- modelo2$residuals
+```
+
+#### Gráfico de probabilidade normal dos resíduos padronizados
+```{r,echo=FALSE}
+plot(modelo2,2)
+```
+
+O comportamento do gráfico é da forma esperada, ou seja, um indício de normalidade dos resíduos.
+
+#### Teste de Shapiro-Wilk
+
+$$H_0: \text{  Os erros possuem distruibuição normal}$$
+$$H_1: \text{  Os erros não possuem distribuição normal}$$
+```{r,echo=FALSE}
+shapiro.test(eij)
+```
+
+Como o p-valor=0.846>0.05 não há evidências ao nível de 5% de significância para rejeitar a hipótese de normalidade dos resíduos.
+  
+
+### Homocedasticidade
+
+```{r,echo=FALSE}
+plot(modelo2,1)
+```
+
+Para corroborar com a análise gráfica serão feitos dois testes para analisar uma possível heterocedasticidade.
+
+### Teste de Bartlett
+
+É um teste sensível à não-normalidade, porém a normalidade é uma suposição atendida no nosso modelo. Que tem por hipóteses:  
+
+$$H_0:\sigma_1^2=\sigma_2^2=...=\sigma_a^2$$  
+  
+$$H_1:\sigma_i\not\equiv\sigma_j \text{  para ao menos um par(i, j) com  } i\not\equiv j$$
+
+```{r,echo=FALSE}
+bartlett.test(resistencia~factor(mistura),quest5)
+```
+Como o p-valor=0.8705>0.05 não há evidências ao nível de 5% de significância de heterocedasticidade dos resíduos.
+  
+### Teste de Levene
+
+É um teste robusto à não-normalidade. Que tem por hipóteses:  
+
+$$H_0:\mu_{d1}=\mu_{d2}=...=\mu_{da}$$  
+
+$$H_1:\text{ Existe alguma diferença}$$
+  
+```{r,echo=FALSE}
+leveneTest(resistencia~factor(mistura),quest5)
+```
+
+Como o p-valor=0.90057>0.05 não há evidências ao nível de 5% de significância de heterocedasticidade dos resíduos.
+
+Com isso as suposições do modelo foram atendidas e consequentemente validamos os testes feitos.
+
+## Estimação da média global e o efeito dos tratamentos
+
+$$\widehat{\mu}=\sum_{i=1}^{4}\sum_{j=1}^{4}\frac{y_{ij}}{n}\text{ logo } \widehat{\mu}\approx 2932$$
+
+**Ou Seja independente do tratamento, é esperado em média um valor de 2932 de resistência**
+
+$$\widehat{\tau}_{i}=\bar{y_i}-\bar{y.} \text{ Para cada tratamento, temos:}$$
+
+$$\widehat{\tau}_{1}=\bar{y_1}-\bar{y.} = 2971-2932 = -11$$
+
+$$\widehat{\tau}_{2}=\bar{y_2}-\bar{y.} = 3156-2932 = 224$$
+
+$$\widehat{\tau}_{3}=\bar{y_3}-\bar{y.} = 2934-2932 = 2$$
+
+$$\widehat{\tau}_{4}=\bar{y_4}-\bar{y.} = 2666-2932 = -266$$
+
+### Analisando os efeitos dos tratamentos :
+
+$\widehat{\tau}_{1}= -11$ Ser desse tratamento (tipo 1 de mistura) contribui para uma diminuição de 11 unidades na média da resistência
+
+$\widehat{\tau}_{2}= 224$ Ser desse tratamento (tipo 2 de mistura) contribui para um aumento de 224 unidades na média da resistência
+
+$\widehat{\tau}_{3}= 2$ Ser desse tratamento (tipo 2 de mistura) contribui para um aumento de 2 unidades na média da resistência
+
+$\widehat{\tau}_{4}= -266$ Ser desse tratamento (tipo 4 de mistura) contribui para uma diminuição de 266 unidades na média da resistência
+ 
+### Intervalo de 95% de confiança para cada uma das médias
+ 
+ Um IC de nível 100(1 − α) para a média do i-ésimo tratamento $\mu_i$ é:
+ 
+ $$\bar{y_i}-t_{\alpha/2,N-a}\sqrt{\frac{QME}{n}}\leq \mu_i \leq \bar{y_i}+t_{\alpha/2,N-a}\sqrt{\frac{QME}{n}}$$
+ 
+ Para $\mu_1$ : 
+ 
+ $$2971-2.18\times 56.63\leq \mu_1 \leq 2971+2,18 \times 56.63$$ 
+ $$2847\leq \mu_1 \leq 3094$$ 
+ $$[2847;3094]$$
+ 
+ **Estimamos com 95% de confiança que este intervalo contém o verdadeiro valor da média do tipo de mistura 1**
+ 
+ Para $\mu_2$ : 
+ 
+ $$3156-2.18\times 56.63\leq \mu_1 \leq 3156+2,18 \times 56.63$$ 
+ $$3033\leq \mu_2 \leq 3279$$ 
+ $$[3033;3279]$$
+ 
+ **Estimamos com 95% de confiança que este intervalo contém o verdadeiro valor da média do tipo de mistura 2**
+ 
+Para $\mu_3$ : 
+ 
+ $$2934-2.18\times 56.63\leq \mu_1 \leq 2934+2,18 \times 56.63$$ 
+ $$2811\leq \mu_2 \leq 3057$$ 
+ $$[2811;3057]$$
+ 
+ **Estimamos com 95% de confiança que este intervalo contém o verdadeiro valor da média do tipo de mistura 3** 
+ 
+Para $\mu_4$ : 
+ 
+ $$2666-2.18\times 56.63\leq \mu_1 \leq 2666+2,18 \times 56.63$$ 
+ $$2543\leq \mu_2 \leq 2789$$ 
+ $$[2543;2789]$$
+ 
+ **Estimamos com 95% de confiança que este intervalo contém o verdadeiro valor da média do tipo de mistura 4**  
+
+## Estimando a diferença entre as médias do tipo 1 e 3 com 99% de confiança
+
+Um IC de nível 100(1 − α) para a diferença entre duas médias de tratamentos $\mu_i-\mu_l$, seria:
+
+$$\bar{y_i}-\bar{y_l}-t_{\alpha/2,N-a}\sqrt{\frac{2QME}{n}}\leq \mu_i-\mu_l \leq \bar{y_i}-\bar{y_l}+t_{\alpha/2,N-a}\sqrt{\frac{2QME}{n}}$$
+ 
+
+$$2971-2934 - 3.05 \times 80.08121 \leq \mu_1-\mu_3 \leq 2971-2934 + 3.05 \times 80.08121 $$
+
+$$ 37-244 \leq \mu_1-\mu_3 \leq 37+244$$
+$$-207\leq \mu_1-\mu_3 \leq 281$$
+$$[-207;281]$$
+
+**Estimamos com 99% de confiança que este intervalo contém o verdadeiro valor da diferença entre as médias  do tipo de mistura 1 e 3**.
+
+
+## Comparações entre as médias
+
+
+### Escolha do contrastes
+
+Iremos construir um conjunto de contrastes ortogonais para comparar as médias observadas.
+
+Vamos considerar a técnica 1 como controle do experimento e também levaremos em conta a informação do boxplot inicial para construir os contrastes.
+
+
+### Coeficientes para contrastes ortogonais
+                
+| Tratamentos | C1  | C2  | C3  |
+| :---------- | :-- | :-- | :-- |
+| 1(controle) | 0   | 1   | 3   |
+| 2(nível 1)  | 1   | -1  | -1  |
+| 3(nível 2)  | 0   | 1   | -1  |
+| 4(nível 3)  | -1  | -1  | -1  |
+
+### Hipóteses
+
+| Hipótese                | Contraste                    |
+| :---------------------- | :--------------------------- |
+| H0 : µ2 = µ4            | C1 = y2\. - y4.              |
+| H0 : µ1 + µ3 = µ2 + µ4  | C2 = y1\. + y3. - y2. - y4.  |
+| H0 : 3µ1 = µ2 + µ3 + µ4 | C3 = 3y1\. - y2. − y3. − y4. |
+
+
+A partir destes contrastes iremos testar as hipóteses exibindo a soma dos quadrados, graus de liberdade, quadrado médio, o resultado do teste F e valor-p.
+
+```{r, echo=F}
+contrast1 <- c(0, 1, 0,-1)
+contrast2 <- c(1,-1, 1,-1)
+contrast3 <- c(3, -1, -1, -1)
+mistura <- rep(1:4,each=4)
+resistencia <- c(3129, 3000, 2865, 2890,3200, 3300, 2975, 3150,2800, 2900, 2985, 3050,2600, 2700, 2600, 2765)
+
+quest5 <- data.frame(mistura,resistencia)
+
+quest5$mistura <- as.factor(quest5$mistura)
+contrasts(quest5$mistura) <- cbind(contrast1, contrast2,contrast3)
+
+modelo2 <- aov(resistencia~mistura, quest5)
+summary.aov(modelo2, split=list(mistura=list("Contraste 1"=1, "Contraste 2"=2, "Contraste 3"=3))) 
+```
+Pela tabela podemos concluir ao nível de 5% de significância que:
+
+-  Há diferenças significativas entre os tratamentos 2 e 4.
+
+- A média dos tratamentos 1 e 3 não diferem da média dos tratamentos 2 e 4.
+
+- O tratamento 1(controle) não difere da média dos outros níveis.
+
+
+
+# Questão 6
+
+Um fabricante farmacêutico quer investigar a bioatividade de uma nova droga. Um experimento com um único fator completamente aleatorizado foi conduzido com três níveis de dosagem, e os seguintes resultados foram encontrados:
+
+| Dosagem |     |     |     |     |
+| :------ | :-- | :-- | :-- | :-- |
+| 20g     | 24  | 28  | 37  | 30  |
+| 30g     | 37  | 44  | 31  | 35  |
+| 40g     | 42  | 47  | 52  | 38  |
+
+
+## Poder do teste
+
+$$1-\beta =P(\text{rejeitar } H_0|H_0\text{ é falsa}) = P(F_0>F_{\alpha-1,N-a}|H_0 \text{ é falsa})$$
+
+**Ou seja, detectar que existe diferença de bioatividade entre os níveis de dosagem**
+
+### Criando a tabela ANOVA para encontrar o QME
+
+```{r,echo=FALSE}
+dosagem<-rep(1:3,each=4)
+resp6<-c(24, 28, 37, 30,
+ 37, 44, 31, 35, 
+ 42, 47, 52, 38) 
+dosagem<-as.factor(dosagem)
+grp.means <- c(31,38,45)
+base6<-data.frame(dosagem,resp6)
+model6<-aov(resp6~dosagem)
+summary(model6)
+# var = 32.03
+```
+
+Pela função `power.anova.test` do pacote `stats`:
+
+```{r}
+power.anova.test(groups=3,between.var=var(grp.means),within.var=32.03,
+sig.level=.05,n=4)
+```
+
+Logo o poder do teste, ou seja, a probabilidade de se rejeitar a hipótese de que não há diferença entre os tratamentos quando ela é falsa é de 0.75.
+
+## Número de réplicas necessárias para se obter 90% de poder
+
+Utilizando novamente a função `power.anova.test`:
+
+```{r}
+power.anova.test(groups=3,between.var=var(grp.means),within.var=32.03,
+sig.level=.05,power=.90)
+
+```
+
+Logo, precisaríamos de no mínimo 6 réplicas para elevarmos  o poder do teste(*probabildade de rejeitar a hipótese nula quando ela é falsa*) para 0.90.
+
+
+## Detectando com 90% de poder a maior diferença entre as médias
+
+```{r}
+
+
+```
+
+## Relacionando a distribuição F não central com o poder do teste
+ 
+ $\text{Se }H_0 \text{ é falsa, temos a estatística:}$
+ 
+ $$ F_0=\frac{QM_{tratamentos}}{QM_{erro}} \sim F_{(a-1,N-a,\delta)}$$
+
+ Onde $\delta$ é o **parâmetro de não centralidade**.
+ 
+
+# Questão 7 
+
+O tempo de resposta em milisegundos foi determinado para três tipos diferentes de circuitos que poderiam ser usados no mecanismo automático de uma válvula de fechamento. A tabela a seguir mostra os resultados de um experimento completamente aleatorizado, com cinco réplicas:
+
+| Tipo de Circuito |     |     |     |     |     |
+| :--------------- | :-- | :-- | :-- | :-- | :-- |
+| 1                | 9   | 12  | 10  | 8   | 15  |
+| 2                | 20  | 21  | 23  | 17  | 30  |
+| 3                | 6   | 5   | 8   | 16  | 7   |
+
+## Estimando $\tau_1 - \tau_2$
+
+Como o efeito dos tratamentos pode ser expresso pelos desvios da média global, aplicando a restrição, temos que :
+
+$$\sum_{i=1}^{a}\widehat{\tau}_{i}=0$$
+
+Com isso as equações normais são:
+
+$$N\widehat{\mu}+n\sum_{i=1}^{a}\widehat{\tau}_{i}=y_{..}$$
+
+$$\widehat{\mu}=\bar{y}_{..}$$
+
+Para as demais equações i=1,2,..,a,
+
+$$n\widehat{\mu}+n\widehat{\tau}_{i}=y_i \implies n\bar{y}_{..}+n\widehat{\tau}_{i}=y_{i.} \implies \widehat{\tau}_{i}=\frac{y_{i.}-n\bar{y}_{..}}{n} \implies \widehat{\tau}_{i}=\bar{y}_{i}-\bar{y}_{..}   $$
+
+Temos as seguintes quantidades:
+
+$$y_{1.}=5\widehat{\mu}+5\widehat{\tau}_{1}$$
+
+$$y_{2.}=5\widehat{\mu}+5\widehat{\tau}_{2}$$
+
+$$y_{3.}=5\widehat{\mu}+5\widehat{\tau}_{3}$$
+
+Com isso:
+
+$$y_{..}=15\widehat{\mu}+5\widehat{\tau}_{1} + 5\widehat{\tau}_{2} + 5\widehat{\tau}_{3}$$
+
+Logo,
+
+$$\widehat{\mu}=\bar{y}_{..}=\frac{9+12+10+8+15+20+21+23+17+30+11+24+7}{15}=$$
+
+$$\frac{207}{15}=13.8$$
+
+### Podemos concluir que:
+
+$$\widehat{\mu}=13.8$$
+
+$$\widehat{\tau}_{1}=\frac{9+12+10+8+15}{15}-13.8=-3$$
+
+$$\widehat{\tau}_{2}=\frac{20+21+23+17+30}{15}-13.8=8.4$$
+
+$$\widehat{\tau}_{3}=\frac{6+5+8+16+7}{15}-13.8=-5.4$$
+
+
+$$\widehat{\tau}_{1}-\widehat{\tau}_{2}=-3-8.4=-11.4$$
+
+## Adicionando uma restrição
+
+Considerando a restrição $\widehat{\tau}_{3}=0$, temos que o estimador pa $\mu$ será diferente:
+
+$$\widehat{\tau}_{i}=\bar{y}_{i}-\bar{y}_{..} $$
+$$\bar{y}_{..} = 15\widehat{\mu}+5\widehat{\tau}_{1} + 5\widehat{\tau}_{2}$$
+$$\widehat{\mu}=\bar{y}_{..}=\frac{9+12+10+8+15+20+21+23+17+30}{15}= 11$$
+
+Se calcularmos novamente $\widehat{\tau}_{1}-\widehat{\tau}_{2}$ é possível ver que não há diferença no resultado mesmo considerando a nova restrição. Isso se deve porque algumas funções dos parâmetros do modelo são unicamente estimadas, independente da restrição. Esse é o caso das diferenças.
+
+
+## Comparando estimativas sob diferentes restrições
+
+## µ + τ1
+
+(i) Somatório dos parâmetros igual a zero:
+
+$$\widehat{\mu}+\widehat{\tau}_{1}= 13.8 - 3 = 10.8 $$
+
+(ii) terceiro parâmetro igual a zero:
+
+$$\widehat{\mu}+\widehat{\tau}_{1}= 11 - 3 = 8 $$
+Neste caso, (i) > (ii).
+
+
+## 2τ1 − τ2 − τ3
+
+(i) Somatório dos parâmetros igual a zero:
+
+$$2\widehat{\tau}_{1}-\widehat{\tau}_{2}-\widehat{\tau}_{3}= -6 - 8.4 + 5.4 = -9$$
+
+(ii) terceiro parâmetro igual a zero:
+
+$$2\widehat{\tau}_{1}-\widehat{\tau}_{2}-\widehat{\tau}_{3}= -6 - 8.4  = -14.4$$
+Neste caso, (i) > (ii).
+
+
+## µ + τ1 + τ2
+
+(i) Somatório dos parâmetros igual a zero:
+
+$$\widehat{\mu}+\widehat{\tau}_{2}+\widehat{\tau}_{3}= 13.8 + 8.4 - 5.4  = 17.2$$
+
+(ii) terceiro parâmetro igual a zero:
+
+$$\widehat{\mu}+\widehat{\tau}_{2}+\widehat{\tau}_{3}= 11 + 8.4  = 19.4$$
+
+Neste caso, (i) < (ii).
