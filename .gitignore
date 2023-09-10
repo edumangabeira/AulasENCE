@@ -9,3 +9,7 @@
 *.log
 *.PNG
 *.tex
+*.rdb
+*.rdx
+*__packages
+*.dcf
