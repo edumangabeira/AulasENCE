@@ -41,28 +41,41 @@ library(kableExtra)
 # S068 == 'Sim'
 ```
 
-## Tipo de parto(S115) por cor/raça(C009) - Média por grupos
+Justificar porque escolhemos apenas parto vaginal para parto humanizado.
+
+Blocos da análise descritiva
+
+- sociodemográficas da mulher 
+
+- sistema de saúde
+
+- estado de saúde da mulher
+
+Calcular CV em vez de IC.
+
+Cruzar a variável motivo de ter feito a cesárea e renda.
+
+Fazer agregações co base no CV.
+
+
+CV passou de 15 já ve se faz sentido juntar a categoria. Ver a tabelinha no TCC da Esther e da Pamela.
+
+## Tipo de parto(S115) por cor/raça(C009) - por grupos
 
 ```{r}
 library(survey)
 svyby(~S115, ~C009, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
 ```
+## Tipo de parto(S115) por região 
 
-## Cor/raça(C009) por tipo de parto(S115) - Média entre grupos
-
-```{r}
-library(survey)
-svyby(~C009, ~S115, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-```
-
-## Tipo de parto(S115) por Escolaridade(D00901) - Média por grupos
+## Tipo de parto(S115) por Escolaridade(D00901) - por grupos
 
 ```{r}
 library(survey)
 svyby(~S115, ~D00901, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
 ```
 
-## Escolaridade(D00901) por Tipo de parto(S115)  - Média entre grupos
+## Escolaridade(D00901) por Tipo de parto(S115)  - entre grupos
 
 ```{r}
 library(survey)
@@ -76,21 +89,31 @@ library(survey)
 svyby(~S115, ~VDF004, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
 ```
 
-## Faixa de renda domiciliar per capita(VDF004) por tipo de parto(S115) - Média entre grupos
+## Faixa de renda domiciliar per capita(VDF004) por tipo de parto(S115) - entre grupos
 
 ```{r}
 library(survey)
 svyby(~VDF004, ~S115, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
 ```
+## se vive com companheiro
 
-## Tipo de parto(S115) por estado civil(C011) - Média por grupos
+C10A C013
+
+## quantos partos teve
+
+## se teve aborto espontaneo
+
+## criar um índice de saúde ou usar as variáveis individuais(IMC, diabetes, pressão alta)
+
+
+## Tipo de parto(S115) por estado civil(C011) - por grupos
 
 ```{r}
 library(survey)
 svyby(~S115, ~C011, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
 ```
 
-## Estado civil(C011) por tipo de parto(S115) - Média entre grupos
+## Estado civil(C011) por tipo de parto(S115) - entre grupos
 
 ```{r}
 library(survey)
@@ -98,14 +121,16 @@ svyby(~C011, ~S115, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, varty
 ```
 
 
-## Tipo de parto(S115) por tipo de atendimento(SUS ou não SUS)(S114) - Média por grupos
+## variável se pagou pelo parto
+
+## Tipo de parto(S115) por tipo de atendimento(SUS ou não SUS)(S114) - por grupos
 
 ```{r}
 library(survey)
 svyby(~S115, ~S114, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
 ```
 
-## Tipo de atendimento(SUS ou não SUS)(S114) por tipo de parto(S115) - Média entre grupos
+## Tipo de atendimento(SUS ou não SUS)(S114) por tipo de parto(S115) - entre grupos
 
 ```{r}
 library(survey)
