@@ -5,8 +5,8 @@ date: "2023-09-10"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 ```
 
 ```{r}
@@ -16,21 +16,21 @@ tipo_de_parto_vars <- c("C008", "C009","C011",  "C01001", "C10A", "C013","C014",
     "I00102", "I00404", 
     "Q00201","Q00202", "Q03001", "Q03002",
     "R032", "R037", 
-    "S065","S066", "S068","S070", "S073", "S074","S080","S111","S112","S114",
+    "S065","S066", "S068","S070", "S073", "S074","S080","S111","S112","S113", "S114", 
     "S115","S116","S118","S125","S128","S129", "S06701",  "S06702",  "S06703",
     "V0026","V0001", "VDF004", "V00291")
-pns2019 <- get_pns(
-   year=2019, 
-   vars=tipo_de_parto_vars,
-   selected=FALSE, 
-   anthropometry=FALSE, 
-   labels=TRUE, 
-   deflator=TRUE, 
-   design=TRUE, 
-   savedir=tempdir()
-)
+#pns2019 <- get_pns(
+#   year=2019, 
+#   vars=tipo_de_parto_vars,
+#   selected=FALSE, 
+#   anthropometry=FALSE, 
+#   labels=TRUE, 
+#   deflator=TRUE, 
+#   design=TRUE, 
+#   savedir=tempdir()
+#)
 
-save(pns2019, file="pns2019.Rdata")
+#save(pns2019, file="pns2019.Rdata")
 ```
 
 
@@ -150,7 +150,6 @@ svyby(~S115, ~I00404, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, var
 
 ## S111 -	Quem fez o parto?
 
-- Vale a pena dividir em categorias menores?
 
 ```{r}
 svyby(~S115, ~S111 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
@@ -158,11 +157,15 @@ svyby(~S115, ~S111 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vart
 
 ## S112	- Onde foi realizado o parto?
 
-- Vale a pena dividir em categorias menores?
 
 ```{r}
 svyby(~S115, ~S112 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
 ``` 
+## Pagou algum valor pelo parto? 
+
+```{r}
+svyby(~S115, ~S113 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
+```
 
 ## S114	- O parto foi feito através do Sistema Único de Saúde (SUS)?
 
