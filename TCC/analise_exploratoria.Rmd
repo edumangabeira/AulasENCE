@@ -11,26 +11,26 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 ```{r}
 library(PNSIBGE)
-tipo_de_parto_vars <- c("C008", "C009","C011",  "C01001", "C10A", "C013","C014", 
-    "I00102", "I00404", 
+tipo_de_parto_vars <- c("C008", "C009", "C011", "C01001", "C10A", "C013","C014",
+    "I00102", "I00404",
     "Q00201","Q00202", "Q03001", "Q03002",
-    "R032", "R037", 
-    "S065","S066", "S068","S070", "S073", "S074","S080","S111","S112","S113", "S114", 
-    "S115","S116","S118","S125","S128","S129", "S06701",  "S06702",  "S06703",
+    "R032", "R037",
+    "S065","S066", "S068","S070", "S073", "S074","S080","S111","S112","S113", "S114",
+    "S115","S116","S11801","S125","S128","S129", "S06701",  "S06702",  "S06703",
     "V0026","V0001", "VDF004", "V00291", "VDD004A",
     "W00103", "W00203")
 
-#pns2019 <- get_pns(
-#   year=2019, 
-#   vars=tipo_de_parto_vars,
-#   selected=FALSE, 
-#   anthropometry=FALSE, 
-#   labels=TRUE, 
-#   deflator=TRUE, 
-#   design=TRUE, 
-#   savedir=tempdir()
-# )
-# save(pns2019, file="pns2019.Rdata")
+pns2019 <- get_pns(
+   year=2019, 
+   vars=tipo_de_parto_vars,
+   selected=FALSE, 
+   anthropometry=FALSE, 
+   labels=TRUE, 
+   deflator=TRUE, 
+   design=TRUE, 
+   savedir=tempdir()
+ )
+save(pns2019, file="pns2019.Rdata")
 ```
 
 
@@ -50,17 +50,27 @@ library(survey)
 pns2019$variables$S115=droplevels(pns2019$variables$S115)
 ```
 
+
+```{r}
+gera_tabela <- function(variavel, ordem_label=NULL){
+  media = svyby(~S115, variavel , subset(pns2019,S068 %in% "Sim"), na.rm=TRUE, FUN=svymean, vartype="cv")
+  total = svyby(~S115, variavel, subset(pns2019,S068 %in% "Sim"), na.rm=TRUE, FUN=svytotal, vartype="cv")[,1:3]
+  names(media) = c("label", "Média - Vaginal", "Média - Cesariana", "CV - Vaginal", "CV - Cesariana")
+  names(total) = c("label", "Total - Vaginal", "Total - Cesariana")
+  media[,2:ncol(media)] = round(100*media[,2:ncol(media)], 1)
+  media = data.frame(left_join(media, total , by="label"), row.names = media$label)
+  kbl(media[,2:ncol(media)], booktabs = T) %>%
+      kable_styling(latex_options = "striped")
+}
+```
+
 #### Recomendações 
 
 - Justificar porque escolhemos apenas parto vaginal para parto humanizado.
 
-- Calcular CV em vez de IC.
-
 - Cruzar a variável motivo de ter feito a cesárea e renda.
 
-- Fazer agregações com base no CV.
-
-- CV passou de 15 já ve se faz sentido juntar a categoria. Ver a tabelinha no TCC da Esther e da Pamela.
+- CV passou de 15 já ver se faz sentido juntar a categoria. Ver a tabelinha no TCC da Esther e da Pamela.
 
 
 # Variáveis sociodemográficas da mulher 
@@ -72,8 +82,19 @@ Abaixo comparamos variáveis sociodemográficas com a escolha do tipo de parto(S
 ### Boxplot
 
 ```{r}
-svyboxplot(formula=C008~1, design=subset(pns2019,!is.na(S068)), main="Distribuição da idade dos respondentes em anos", ylab="Idade")
+svyboxplot(formula=C008~S115, design=subset(pns2019,S068 %in% "Sim"), main="Distribuição da idade dos respondentes em anos", ylab="Idade")
 ```
+
+### Tabela
+
+```{r}
+pns2019$variables$idade = ifelse(pns2019$variables$C008 %in% c(18:24),"18-24 anos",
+                    ifelse(pns2019$variables$C008 %in% c(25:32),"25-32 anos",
+                    ifelse(pns2019$variables$C008 %in% c(33:40),"35-40 anos",
+                    "40+ anos")))
+gera_tabela(~idade)
+```
+
 
 ## C009 - Cor ou raça
 
@@ -82,28 +103,38 @@ pns2019$variables$cor=ifelse(pns2019$variables$C009 %in% c("Amarela", "Indígena
                              ifelse(pns2019$variables$C009 == "Branca", "Branca",
                             ifelse(pns2019$variables$C009 == "Preta", "Preta",
                             ifelse(pns2019$variables$C009 == "Parda", "Parda", "Ignorado"))))
-table = svyby(~S115, ~cor, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~cor)
 ```
 
 ## VDD004A - Escolaridade
 
 ```{r}
-table = svyby(~S115, ~VDD004A, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+pns2019$variables$escolaridade=ifelse(pns2019$variables$VDD004A %in% c("Sem instrução", "Fundamental incompleto ou equivalente"), "Sem instrução", 
+                             ifelse(pns2019$variables$VDD004A %in% c("Fundamental completo ou equivalente", "Médio incompleto ou equivalente"), "Fundamental completo ou equivalente",
+                            ifelse(pns2019$variables$VDD004A %in% c("Superior incompleto ou equivalente", "Médio completo ou equivalente"), "Médio completo ou equivalente",
+                            ifelse(pns2019$variables$VDD004A == "Superior completo", "Superior completo ou mais", "Ignorado"))))
+gera_tabela(~escolaridade)
 ```
 
 ## C01001 - Cônjuge ou companheiro(a) mora em nesse domicílio.
 
 ```{r}
-table = svyby(~S115, ~C01001, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1)
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~C01001)
+```
+
+## C013 - Cônjuge ou companheiro(a) mora em outro domicílio.
+
+Criar regra com outra variável para ver se conjuge mora em outro domicílio e se nao tem conjuge ou outro companheiro.
+
+```{r}
+gera_tabela(~C013)
+```
+
+## Tem cônjuge ou companheiro(a)
+
+```{r}
+pns2019$variables$conjuge = ifelse((pns2019$variables$C01001 == "Sim") | (pns2019$variables$C013 == "Sim"),"Sim", "Não")
+gera_tabela(~conjuge)
 ```
 
 ## V0001 - Unidade da Federação
@@ -113,27 +144,25 @@ pns2019$variables$regiao=ifelse(pns2019$variables$V0001 %in% c("Acre","Amazonas"
                                 ifelse(pns2019$variables$V0001 %in% c("Maranhão","Piauí","Ceará","Rio Grande do Norte","Paraíba","Pernambuco","Alagoas","Sergipe","Bahia"),"Nordeste",
                                        ifelse(pns2019$variables$V0001 %in% c("Minas Gerais","Espírito Santo","Rio de Janeiro","São Paulo"),"Sudeste",
                                               ifelse(pns2019$variables$V0001 %in% c("Paraná","Santa Catarina","Rio Grande do Sul"), "Sul","Centro-Oeste"))))
-table = svyby(~S115, ~regiao, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~regiao)
 ```
 
 
 ## V0026 - Tipo de situação censitária
 
 ```{r}
-table = svyby(~S115, ~V0026, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~V0026)
 ```
 
 
 ## VDF004	- Faixa de rendimento domiciliar per capita (exclusive o rendimento das pessoas cuja condição na  unidade domiciliar era pensionista, empregado doméstico ou parente do empregado doméstico)"
 
 ```{r}
-table = svyby(~S115, ~VDF004, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv") 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+pns2019$variables$renda=ifelse(pns2019$variables$VDF004 %in% c("Até ¼ salário mínimo", "Mais de ¼ até ½ salário mínimo"), "Até  ½ salário mínimo", 
+                             ifelse(pns2019$variables$VDF004 %in% c("Mais de ½ até 1 salário mínimo", "Mais de 1 até 2 salários mínimos"), "Mais de ½ até 2 salários mínimos",
+                            ifelse(pns2019$variables$VDF004 %in% c("Mais de 2 até 3 salários mínimos", "Mais de 3 até 5 salários mínimos"), "Mais de 2 até 5 salários mínimos", 
+                            ifelse(pns2019$variables$VDF004 == "Mais de 5 salários mínimos", "Mais 5 salários mínimos", "Ignorado"))))
+gera_tabela(~renda)
 ```
 
 # Sistema de saúde
@@ -141,75 +170,63 @@ kbl(table[,2:ncol(table)], booktabs = T) %>%
 ## I00102 -	tem algum plano de saúde médico particular, de empresa ou órgão público?
 
 ```{r}
-table = svyby(~S115, ~I00102, subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~I00102)
 ```
 
 ## S111 -	Quem fez o parto?
 
-Depende da S065- "Alguma vez ficou grávida, mesmo que a gravidez não tenha chegado até o final?". Como a S068 - "Quando estava grávida fez alguma consulta de pré-natal?" também depende da S065, o filtro abaixo está correto. Todas as análises restantes desse bloco seguem a mesma lógica.
+Cruzar I00102 e S111.
 
 ```{r}
-table = svyby(~S115, ~S111 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+pns2019$variables$quem_fez_parto=ifelse(pns2019$variables$S111 == "Médico (a)", "Médico (a)", "Outros")
+gera_tabela(~quem_fez_parto)
 ```
 
 ## S112	- Onde foi realizado o parto?
 
+Testar outras agregações(Hospital, não hospital)
+
 ```{r}
 pns2019$variables$local=ifelse(pns2019$variables$S112 %in% c(
-  "Unidade básica de saúde (posto ou centro de saúde ou unidade de saúde da família).	", 
-  "Policlínica pública, PAM (Posto de Assistência Médica) ou Centro de Especialidades público	",
   "UPA (Unidade de Pronto Atendimento), outro tipo de pronto atendimento público (24 horas), pronto-socorro ou emergência de hospital público.\n	",
-  "Hospital público ou maternidade pública"), "Local de atendimento público", 
+  "Hospital público ou maternidade pública", "Pronto-atendimento ou emergência de hospital privado\n"), "Ambiente hospitalar", 
                              ifelse(pns2019$variables$S112 %in% c(
                                "Casa de parto",
                                "Consultório particular, clínica privada ou ambulatório de hospital privado.",
-                               "Pronto-atendimento ou emergência de hospital privado\n	"), 
-                               "Local de atendimento privado", "Outros"))
-
-table = svyby(~S115, ~local , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+                               "Unidade básica de saúde (posto ou centro de saúde ou unidade de saúde da família).	", 
+  "Policlínica pública, PAM (Posto de Assistência Médica) ou Centro de Especialidades público"), 
+                               "Clínica, consultório, posto de saúde, ambulatório ou similares", "Outros"))
+gera_tabela(~local)
 ``` 
 
-## S113 - Pagou algum valor pelo parto? 
+## S113 - Pagou algum valor pelo parto?
+
+Cruzar S113 e S114
+
+svyby(~S115, ~S113 + S114, subset(pns2019,S068 %in% "Sim"), na.rm=TRUE, FUN=svytotal, vartype="cv")
 
 ```{r}
-table = svyby(~S115, ~S113 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~S113)
 ```
 
 ## S114	- O parto foi feito através do Sistema Único de Saúde (SUS)?
 
 ```{r}
-table = svyby(~S115, ~S114 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~S114)
 ```
 
 ## S128	- O parto foi realizado no estabelecimento de saúde indicado no pré-natal?
 
-```{r}
-table = svyby(~S115, ~S128 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+Cruzar S112 com a S128
+
+svyby(~S115, ~S113 + S114, subset(pns2019,S068 %in% "Sim"), na.rm=TRUE, FUN=svytotal, vartype="cv")
+
+```
+sum(pns2019$variables$S113 %in% 'Sim' & pns2019$variables$S114 %in% 'Sim' & pns2019$variables$S115 %in% 'Parto normal/vaginal')
 ```
 
-## S129	- "Quantos serviços de saúde procurou quando entrou em trabalho de parto para que seu(sua) filho(a) pudesse nascer?"
-
 ```{r}
-table = svyby(~S115, ~S129 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~S128)
 ```
 
 # Estado de saúde da mulher
@@ -217,142 +234,94 @@ kbl(table[,2:ncol(table)], booktabs = T) %>%
 ## Q00201	- Algum médico já lhe deu o diagnóstico de hipertensão arterial (pressão alta)?
 
 ```{r}
-table = svyby(~S115, ~Q00201 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~Q00201)
 ```
 
 ## Q03001 - Algum médico já lhe deu o diagnóstico de diabetes?
 
 ```{r}
-table = svyby(~S115, ~Q03001 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~Q03001)
 ```
 
 ## R032 - Nos últimos 12 meses, a sra participou de grupo de planejamento familiar?
 
 ```{r}
-table = svyby(~S115, ~R032 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~R032)
 ```
 
 ## R037 - A sra e/ou seu companheiro já fizeram ou fazem algum tratamento para engravidar?
 
 ```{r}
-table = svyby(~S115, ~R037 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~R037)
 ```
 
 ## S066 - Quantos partos a Sra já teve?
 
-
 ```{r}
 pns2019$variables$quantos_partos=ifelse(pns2019$variables$S066 == '1', '1',
-                                ifelse(pns2019$variables$S066 == '2', '2',
-                                ifelse(pns2019$variables$S066 == '3', '3',
-                                ifelse(pns2019$variables$S066 == '4', '4',">= 5"))))
-table = svyby(~S115, ~quantos_partos , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+                                ifelse(pns2019$variables$S066 == '2', '2', "3 ou mais"))
+gera_tabela(~quantos_partos)
 ```
 
 ## S070 - Quantas consultas de pré-natal fez durante esta gravidez?
 
-
 ```{r}
-pns2019$variables$quantos_prenatal=ifelse(pns2019$variables$S070 %in% c('Uma', 'Duas', 'Três'), '1-3',
-                                ifelse(pns2019$variables$S070 %in% c('Quatro', 'Cinco'), '4-5',
-                                ifelse(pns2019$variables$S070 %in% c('Seis', 'Sete ou mais'), '> 6',"Não sabe\\Não lembra")))
-table = svyby(~S115, ~quantos_prenatal , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+pns2019$variables$quantos_prenatal=ifelse(pns2019$variables$S070 %in% c('Uma', 'Duas', 'Três', 'Quatro', 'Cinco'), 'menos de 6',
+                                ifelse(pns2019$variables$S070 == 'Seis', '6',
+                                ifelse(pns2019$variables$S070 == 'Sete ou mais', 'Mais de 6',"Não sabe \\\\ Não lembra")))
+gera_tabela(~quantos_prenatal)
 ```
 
 ## S073 - "As consultas do pré-natal foram feitas através do Sistema Único de Saúde (SUS)?"
 
 ```{r}
-table = svyby(~S115, ~S073 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~S073)
 ```
 
 ## S074 - Nesta gravidez, quem a atendeu na maioria das consultas?
 
+- Olhar a distribuição e ver se é necessário agregar os dois últimos
+
 ```{r}
-table = svyby(~S115, ~S074 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+pns2019$variables$atendimento=ifelse(pns2019$variables$S111 == "Médico (a)", "Médico (a)", 
+                             ifelse(pns2019$variables$S111 == "Enfermeiro (a)", "Enfermeiro (a)", "Outro (a) profissional de saúde"))
+gera_tabela(~atendimento)
 ```
 
 ## S080 - Durante o pré-natal de (nome) foi realizado teste∕ exame para sífilis? 
 
 ```{r}
-table = svyby(~S115, ~S080 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~S080)
 ```
 
-## S116 - Nesta gravidez, entrou em trabalho de parto?
+## S11801 - Quantas semanas de gravidez tinha no momento do parto?
 
 ```{r}
-table = svyby(~S115, ~S116 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
-```
-
-## S118 - Quantas semanas de gravidez tinha no momento do parto?
-
-```{r}
-table = svyby(~S115, ~S118 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+pns2019$variables$semanas=ifelse(pns2019$variables$S11801 %in% c(0:38) , "até 38 semanas", 
+                             ifelse(pns2019$variables$S11801 %in% c(39:42), "de 39 até 42 semanas",  "Mais de 42 semanas"))
+gera_tabela(~semanas)
 ```
 
 ## S125 - Teve alguma complicação durante o parto?
 
 ```{r}
-table = svyby(~S115, ~S125 , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
+gera_tabela(~S125)
 ```
 
-## IMC
+## Diagnósticos
 
-```{r}
-pns2019$variables$IMC = ifelse(pns2019$variables$W00103/((pns2019$variables$W00203/100)^2) < 16.5, 'Peso severamente abaixo do normal',
-                                ifelse(pns2019$variables$W00103/((pns2019$variables$W00203/100)^2) >= 16.5 & pns2019$variables$W00103/((pns2019$variables$W00203/100)^2) < 18.5, 'Peso abaixo do normal',
-                                ifelse(pns2019$variables$W00103/((pns2019$variables$W00203/100)^2) >= 18.5 & pns2019$variables$W00103/((pns2019$variables$W00203/100)^2) < 24.99, 'Normal',
-                                ifelse(pns2019$variables$W00103/((pns2019$variables$W00203/100)^2) >= 25 & pns2019$variables$W00103/((pns2019$variables$W00203/100)^2) < 29.99, 'Pré-obeso',
-                                       "Obesidade"))))
-table = svyby(~S115, ~IMC , subset(pns2019,!is.na(S068)), na.rm=TRUE, FUN=svymean, vartype="cv")
-table[,2:ncol(table)] = round(100*table[,2:ncol(table)], 1) 
-kbl(table[,2:ncol(table)], booktabs = T) %>%
-    kable_styling(latex_options = "striped")
-```
+- Procurar diagnóstico de obesidade na PNS
+- Criar índice como número de diagnósticos ou hábitos(fumar, beber), por exemplo.
+- Contar quantas dessas doenças há diagnóstico e dividir em categorias.
 
-## Aborto espontâneo 
+# Modelagem
 
-A pergunta sobre aborto espontâneo não está na PNS 2019, apenas na edição de 2013
+- Testar interações entre variáveis
 
+## Escrita
 
-# Agregações
+- Explicar com referências a importância de cada variável 
 
 
 
-## Criar um índice de saúde ou usar as variáveis individuais(IMC, diabetes, pressão alta)
 
