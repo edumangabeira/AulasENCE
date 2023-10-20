@@ -1,126 +1,4 @@
----
-title: "Modelagem"
-author: "Eduardo Freire, Marina Mangini"
-date: "2023-10-04"
-output: html_document
----
 
-```{r setup, include=FALSE, message=FALSE, warning=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
-```
-
-```{r}
-library(PNSIBGE)
-tipo_de_parto_vars <- c("C008", "C009", "C011", "C01001", "C01002", "C10A", "C013","C014",
-    "I00102", "I00404",
-    "Q00201","Q00202", "Q03001", "Q03002",
-    "R032", "R037",
-    "S065","S066", "S068","S070", "S073", "S074","S080","S111","S112","S113", "S114",
-    "S115","S116","S11801","S125","S128","S129", "S06701",  "S06702",  "S06703",
-    "V0026","V0001", "VDF004", "V00291", "VDD004A",
-    "W00103", "W00203")
-
-pns2019 <- get_pns(
-   year=2019, 
-   vars=tipo_de_parto_vars,
-   selected=FALSE, 
-   anthropometry=FALSE, 
-   labels=TRUE, 
-   deflator=TRUE, 
-   design=TRUE, 
-   savedir=tempdir()
-)
-save(pns2019, file="pns2019.Rdata")
-```
-
-
-```{r}
-load("pns2019.Rdata")
-```
-
-
-```{r}
-library(dplyr)
-library(ggplot2)
-library(kableExtra)
-library(survey)
-### Critérios para a subamostra
-# S065 == 'Sim'
-# S068 == 'Sim'
-pns2019$variables$S115=droplevels(pns2019$variables$S115)
-```
-
-
-```{r}
-pns2019$variables$idade = ifelse(pns2019$variables$C008 %in% c(18:24),"18-24 anos",
-                    ifelse(pns2019$variables$C008 %in% c(25:32),"25-32 anos",
-                    ifelse(pns2019$variables$C008 %in% c(33:40),"35-40 anos",
-                    "40+ anos")))
-pns2019$variables$conjuge = ifelse((pns2019$variables$C01001 == "Sim") | (pns2019$variables$C013 == "Sim"),"Sim","Não")
-pns2019$variables$cor=ifelse(pns2019$variables$C009 %in% c("Amarela", "Indígena"), "Amarelas e Indígenas", 
-                             ifelse(pns2019$variables$C009 == "Branca", "Branca",
-                            ifelse(pns2019$variables$C009 == "Preta", "Preta",
-                            ifelse(pns2019$variables$C009 == "Parda", "Parda", "Ignorado"))))
-
-pns2019$variables$escolaridade=ifelse(pns2019$variables$VDD004A %in% c("Sem instrução", "Fundamental incompleto ou equivalente"), "Sem instrução", 
-                             ifelse(pns2019$variables$VDD004A %in% c("Fundamental completo ou equivalente", "Médio incompleto ou equivalente"), "Fundamental completo ou equivalente",
-                            ifelse(pns2019$variables$VDD004A %in% c("Superior incompleto ou equivalente", "Médio completo ou equivalente"), "Médio completo ou equivalente",
-                            ifelse(pns2019$variables$VDD004A == "Superior completo", "Superior completo ou mais", "Ignorado"))))
-
-pns2019$variables$regiao=ifelse(pns2019$variables$V0001 %in% c("Acre","Amazonas","Roraima","Pará","Amapá","Tocantins"),"Norte",
-                                ifelse(pns2019$variables$V0001 %in% c("Maranhão","Piauí","Ceará","Rio Grande do Norte","Paraíba","Pernambuco","Alagoas","Sergipe","Bahia"),"Nordeste",
-                                       ifelse(pns2019$variables$V0001 %in% c("Minas Gerais","Espírito Santo","Rio de Janeiro","São Paulo"),"Sudeste",
-                                              ifelse(pns2019$variables$V0001 %in% c("Paraná","Santa Catarina","Rio Grande do Sul"), "Sul","Centro-Oeste"))))
-
-pns2019$variables$renda=ifelse(pns2019$variables$VDF004 %in% c("Até ¼ salário mínimo", "Mais de ¼ até ½ salário mínimo"), "Até  ½ salário mínimo", 
-                             ifelse(pns2019$variables$VDF004 %in% c("Mais de ½ até 1 salário mínimo", "Mais de 1 até 2 salários mínimos"), "Mais de ½ até 2 salários mínimos",
-                            ifelse(pns2019$variables$VDF004 %in% c("Mais de 2 até 3 salários mínimos", "Mais de 3 até 5 salários mínimos"), "Mais de 2 até 5 salários mínimos", 
-                            ifelse(pns2019$variables$VDF004 == "Mais de 5 salários mínimos", "Mais 5 salários mínimos", "Ignorado"))))
-
-pns2019$variables$quem_fez_parto=ifelse(pns2019$variables$S111 == "Médico (a)", "Médico (a)", 
-                             ifelse(pns2019$variables$S111 == "Enfermeiro (a)", "Enfermeiro (a)", "Outros"))
-
-pns2019$variables$local=ifelse(pns2019$variables$S112 %in% c(
-  "UPA (Unidade de Pronto Atendimento), outro tipo de pronto atendimento público (24 horas), pronto-socorro ou emergência de hospital público.\n	",
-  "Hospital público ou maternidade pública", "Pronto-atendimento ou emergência de hospital privado\n"), "Ambiente hospitalar", 
-                             ifelse(pns2019$variables$S112 %in% c(
-                               "Casa de parto",
-                               "Consultório particular, clínica privada ou ambulatório de hospital privado.",
-                               "Unidade básica de saúde (posto ou centro de saúde ou unidade de saúde da família).	", 
-  "Policlínica pública, PAM (Posto de Assistência Médica) ou Centro de Especialidades público"), 
-                               "Clínica, consultório, posto de saúde, ambulatório ou similares", "Outros"))
-
-pns2019$variables$quantos_partos=ifelse(pns2019$variables$S066 == '1', '1',
-                                ifelse(pns2019$variables$S066 == '2', '2', "3 ou mais"))
-
-pns2019$variables$quantos_prenatal=ifelse(pns2019$variables$S070 %in% c('Uma', 'Duas', 'Três', 'Quatro', 'Cinco'), 'menos de 6',
-                                ifelse(pns2019$variables$S070 == 'Seis', '6',
-                                ifelse(pns2019$variables$S070 == 'Sete ou mais', 'Mais de 6',"Não sabe \\\\ Não lembra")))
-
-pns2019$variables$atendimento=ifelse(pns2019$variables$S111 == "Médico (a)", "Médico (a)", 
-                             ifelse(pns2019$variables$S111 == "Enfermeiro (a)", "Enfermeiro (a)", "Outro (a) profissional de saúde"))
-pns2019$variables$semanas=ifelse(pns2019$variables$S11801 %in% c(0:38) , "até 38 semanas", 
-                             ifelse(pns2019$variables$S11801 %in% c(39:42), "de 39 até 42 semanas",  "Mais de 42 semanas"))
-
-```
-
-```{r}
-gera_tabela_mlg_complexo <- function(SVYGLM.RESULT, digits = 2) {
-  if (SVYGLM.RESULT$family$family == "quasibinomial") {
-    LABEL <- "OR"
-  } else {
-    stop("Not logistic model")
-  }
-  COEF      <- stats::coef(SVYGLM.RESULT)
-  CONFINT   <- stats::confint(SVYGLM.RESULT)
-  TABLE     <- cbind(coef=COEF, CONFINT)
-  TABLE.EXP <- round(exp(TABLE), digits)
-  colnames(TABLE.EXP)[1] <- LABEL
-  TABLE.EXP
-}
-```
-
-# Passos
 
 - Seguir os blocos para ajustar os modelos e separar por bloco quais variáveis podem ser usadas
   - Conferir variável a variável e tirar as que não foram significativas
@@ -740,7 +618,7 @@ labels_modelos <- c(
 aic_modelos <- AIC(mod3.9, mod3.10, mod3.11, mod3.12, mod3.13, mod3.14, mod3.15, mod3.16, mod3.17, mod3.18)
 ```
 
-Não consegui calcular AIC para esses modelos. Tem algo de estranho com essas variáveis.
+Não consegui calcular AIC para esses modelos. Tem algo de estranho com essas variáveis. Será que tem a ver com modelo aninhado/não aninhado? Pesquisar depois se nesse caso eu devo usar a deviance.
 
 ```{r}
 df <- data.frame(cbind(labels_modelos, aic_modelos))
@@ -863,7 +741,7 @@ labels_modelos <- c(
 aic_modelos <- AIC(mod4.1, mod4.4, mod4.8)
 ```
 
-Não consegui calcular AIC para esses modelos. Tem algo de estranho as variáveis do grupo 2. Reduzi a amostra pra pegar só o que não for NA para cada variável do grupo 2. As variáveis S114(SUS) e I00102(plano) continuaram dando problema mesmo com o ajuste.
+Não consegui calcular AIC para esses modelos. Tem algo de estranho as variáveis do grupo 2.(Depois pesquisar se dá pra usar a deviance) Reduzi a amostra pra pegar só o que não for NA para cada variável do grupo 2. As variáveis S114(SUS) e I00102(plano) continuaram dando problema mesmo com o ajuste.
 
 ```{r}
 df <- data.frame(cbind(labels_modelos, aic_modelos))
@@ -1164,12 +1042,11 @@ summary(mod5.7)
 - S114 feito no SUS + Q00201 hipertensão + I00102 plano de saúde
 
 
+# Avaliação final
+
+## modelos que ficam
 
 # Comparando AIC de todos os modelos escolhidos
 
 --------------------------------------------------------------------------
-
-
-
-
 

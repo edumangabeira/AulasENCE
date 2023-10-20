@@ -1,0 +1,479 @@
+---
+title: "Modelagem"
+author: "Eduardo Freire, Marina Mangini"
+date: "2023-10-04"
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+```{r}
+library(PNSIBGE)
+tipo_de_parto_vars <- c("C008", "C009", "C011", "C01001", "C01002", "C10A", "C013","C014",
+    "I00102", "I00404",
+    "Q00201","Q00202", "Q03001", "Q03002",
+    "R032", "R037",
+    "S065","S066", "S068","S070", "S073", "S074","S080","S111","S112","S113", "S114",
+    "S115","S116","S11801","S125","S128","S129", "S06701",  "S06702",  "S06703",
+    "V0026","V0001", "VDF004", "V00291", "VDD004A",
+    "W00103", "W00203")
+
+pns2019 <- get_pns(
+   year=2019, 
+   vars=tipo_de_parto_vars,
+   selected=FALSE, 
+   anthropometry=FALSE, 
+   labels=TRUE, 
+   deflator=TRUE, 
+   design=TRUE, 
+   savedir=tempdir()
+)
+save(pns2019, file="pns2019.Rdata")
+```
+
+
+```{r}
+load("pns2019.Rdata")
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(kableExtra)
+library(survey)
+### Critérios para a subamostra
+# S065 == 'Sim'
+# S068 == 'Sim'
+pns2019$variables$S115=droplevels(pns2019$variables$S115)
+```
+
+
+```{r}
+pns2019$variables$idade = ifelse(pns2019$variables$C008 %in% c(18:24),"18-24 anos",
+                    ifelse(pns2019$variables$C008 %in% c(25:32),"25-32 anos",
+                    ifelse(pns2019$variables$C008 %in% c(33:40),"35-40 anos",
+                    "40+ anos")))
+pns2019$variables$conjuge = ifelse((pns2019$variables$C01001 == "Sim") | (pns2019$variables$C013 == "Sim"),"Sim","Não")
+pns2019$variables$cor=ifelse(pns2019$variables$C009 %in% c("Amarela", "Indígena"), "Amarelas e Indígenas", 
+                             ifelse(pns2019$variables$C009 == "Branca", "Branca",
+                            ifelse(pns2019$variables$C009 == "Preta", "Preta",
+                            ifelse(pns2019$variables$C009 == "Parda", "Parda", "Ignorado"))))
+
+pns2019$variables$escolaridade=ifelse(pns2019$variables$VDD004A %in% c("Sem instrução", "Fundamental incompleto ou equivalente"), "Sem instrução", 
+                             ifelse(pns2019$variables$VDD004A %in% c("Fundamental completo ou equivalente", "Médio incompleto ou equivalente"), "Fundamental completo ou equivalente",
+                            ifelse(pns2019$variables$VDD004A %in% c("Superior incompleto ou equivalente", "Médio completo ou equivalente"), "Médio completo ou equivalente",
+                            ifelse(pns2019$variables$VDD004A == "Superior completo", "Superior completo ou mais", "Ignorado"))))
+
+pns2019$variables$regiao=ifelse(pns2019$variables$V0001 %in% c("Acre","Amazonas","Roraima","Pará","Amapá","Tocantins"),"Norte",
+                                ifelse(pns2019$variables$V0001 %in% c("Maranhão","Piauí","Ceará","Rio Grande do Norte","Paraíba","Pernambuco","Alagoas","Sergipe","Bahia"),"Nordeste",
+                                       ifelse(pns2019$variables$V0001 %in% c("Minas Gerais","Espírito Santo","Rio de Janeiro","São Paulo"),"Sudeste",
+                                              ifelse(pns2019$variables$V0001 %in% c("Paraná","Santa Catarina","Rio Grande do Sul"), "Sul","Centro-Oeste"))))
+
+pns2019$variables$renda=ifelse(pns2019$variables$VDF004 %in% c("Até ¼ salário mínimo", "Mais de ¼ até ½ salário mínimo"), "Até  ½ salário mínimo", 
+                             ifelse(pns2019$variables$VDF004 %in% c("Mais de ½ até 1 salário mínimo", "Mais de 1 até 2 salários mínimos"), "Mais de ½ até 2 salários mínimos",
+                            ifelse(pns2019$variables$VDF004 %in% c("Mais de 2 até 3 salários mínimos", "Mais de 3 até 5 salários mínimos"), "Mais de 2 até 5 salários mínimos", 
+                            ifelse(pns2019$variables$VDF004 == "Mais de 5 salários mínimos", "Mais 5 salários mínimos", "Ignorado"))))
+
+pns2019$variables$quem_fez_parto=ifelse(pns2019$variables$S111 == "Médico (a)", "Médico (a)", 
+                             ifelse(pns2019$variables$S111 == "Enfermeiro (a)", "Enfermeiro (a)", "Outros"))
+
+pns2019$variables$local=ifelse(pns2019$variables$S112 %in% c(
+  "UPA (Unidade de Pronto Atendimento), outro tipo de pronto atendimento público (24 horas), pronto-socorro ou emergência de hospital público.\n	",
+  "Hospital público ou maternidade pública", "Pronto-atendimento ou emergência de hospital privado\n"), "Ambiente hospitalar", 
+                             ifelse(pns2019$variables$S112 %in% c(
+                               "Casa de parto",
+                               "Consultório particular, clínica privada ou ambulatório de hospital privado.",
+                               "Unidade básica de saúde (posto ou centro de saúde ou unidade de saúde da família).	", 
+  "Policlínica pública, PAM (Posto de Assistência Médica) ou Centro de Especialidades público"), 
+                               "Clínica, consultório, posto de saúde, ambulatório ou similares", "Outros"))
+
+pns2019$variables$quantos_partos=ifelse(pns2019$variables$S066 == '1', '1',
+                                ifelse(pns2019$variables$S066 == '2', '2', "3 ou mais"))
+
+pns2019$variables$quantos_prenatal=ifelse(pns2019$variables$S070 %in% c('Uma', 'Duas', 'Três', 'Quatro', 'Cinco'), 'menos de 6',
+                                ifelse(pns2019$variables$S070 == 'Seis', '6',
+                                ifelse(pns2019$variables$S070 == 'Sete ou mais', 'Mais de 6',"Não sabe \\\\ Não lembra")))
+
+pns2019$variables$atendimento=ifelse(pns2019$variables$S111 == "Médico (a)", "Médico (a)", 
+                             ifelse(pns2019$variables$S111 == "Enfermeiro (a)", "Enfermeiro (a)", "Outro (a) profissional de saúde"))
+pns2019$variables$semanas=ifelse(pns2019$variables$S11801 %in% c(0:38) , "até 38 semanas", 
+                             ifelse(pns2019$variables$S11801 %in% c(39:42), "de 39 até 42 semanas",  "Mais de 42 semanas"))
+
+```
+
+```{r}
+gera_tabela_mlg_complexo <- function(SVYGLM.RESULT, digits = 2) {
+  if (SVYGLM.RESULT$family$family == "quasibinomial") {
+    LABEL <- "OR"
+  } else {
+    stop("Not logistic model")
+  }
+  COEF      <- stats::coef(SVYGLM.RESULT)
+  CONFINT   <- stats::confint(SVYGLM.RESULT)
+  TABLE     <- cbind(coef=COEF, CONFINT)
+  TABLE.EXP <- round(exp(TABLE), digits)
+  colnames(TABLE.EXP)[1] <- LABEL
+  TABLE.EXP
+}
+```
+
+# Passos
+
+- Escrever sobre as variáveis não significativas e porquê elas foram sendo retiradas do modelo.
+
+- Escrever sobre os testes 1 a 1. Montar um quadro. Dividir entre significativas e não significativas. Um quadro para o ranqueamento e outro para mostras quais foram significativas ou não significativas.
+
+- Escrever sobre a adição das variáveis após a escolha dos modelos mais interessantes nos testes 1 a 1. Adicionar as variáveis de acordo com o quadro feito anteriormente, variáveis com melhor AIC. 
+
+"Ao adicionar x1, a variável x2 perdeu a significância e saiu do modelo."
+
+- Quando for olhar as interações voltar para variáveis que do ponto de vista da literatura são importantes.
+
+## Critério para escolher categoria de referência 
+
+- Literatura
+- Categorias extremas
+- Categoria com mais observações 
+
+# Variáveis sociodemográficas da mulher
+
+### Idade
+
+
+## Contínua
+
+```{r}
+mod1.1=svyglm(S115~C008, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod1.1)
+```
+
+Significativo
+
+## Categórica
+
+```{r}
+mod1.1.1=svyglm(S115~idade, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod1.1.1)
+```
+
+Significativo - Usar literatura para justificar 18-24 anos como categoria de referência
+
+### Cor ou raça
+
+```{r}
+pns2019$variables$cor <- relevel(as.factor(pns2019$variables$cor), ref = "Preta")
+mod1.2=svyglm(S115~cor, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod1.2)
+```
+
+Não Significativo, mesmo alterando categoria de referência 
+
+### Escolaridade
+
+```{r}
+pns2019$variables$escolaridade=ifelse(pns2019$variables$VDD004A %in% c("Sem instrução", "Fundamental incompleto ou equivalente", "Fundamental completo ou equivalente", "Médio incompleto ou equivalente"), "Sem instrução ou Fundamental completo ou equivalente",
+                            ifelse(pns2019$variables$VDD004A %in% c("Superior incompleto ou equivalente", "Médio completo ou equivalente"), "Médio completo ou equivalente",
+                            ifelse(pns2019$variables$VDD004A == "Superior completo", "Superior completo ou mais", "Ignorado")))
+pns2019$variables$escolaridade <- relevel(as.factor(pns2019$variables$escolaridade), ref = "Sem instrução ou Fundamental completo ou equivalente")
+mod1.3=svyglm(S115~escolaridade, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod1.3)
+```
+
+1. Sem instrução deu não significativo - Agrupamos com fundamental.
+2. Tomamos `Sem instrução ou Fundamental completo ou equivalente` como categoria de referência.
+3. Depois deu tudo significativo.
+
+### Tem cônjuge ou companheiro(a)
+
+```{r}
+pns2019$variables$conjuge <- relevel(as.factor(pns2019$variables$conjuge), ref = "Sim")
+mod1.4=svyglm(S115~conjuge, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod1.4)
+```
+
+Significativo. Categoria de referência 'sim' por estar em maior quantidade.
+
+### Unidade da Federação
+
+```{r}
+pns2019$variables$regiaoAgg =ifelse(pns2019$variables$regiao %in% c("Norte", "Nordeste"),"Norte e Nordeste",
+                    ifelse(pns2019$variables$regiao %in% c("Sul", "Sudeste"),"Sul e Sudeste","Centro-Oeste"))
+pns2019$variables$regiaoAgg <- relevel(as.factor(pns2019$variables$regiaoAgg), ref = "Norte e Nordeste")
+mod1.5=svyglm(S115~regiaoAgg, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod1.5)
+```
+
+1. Não deu significativo para Sul e para Sudeste tomando Centro-oeste como categoria de referência.
+2. Testamos outras categorias de referência, mas os modelos também trazaim categorias não significativas
+3. Agregamos por Sul e Sudeste, Norte e Nordeste, Centro-Oeste.
+4. Tomamos Norte e Nordeste como categoria de referência e deu significativo.
+
+### V0026 - Tipo de situação censitária
+
+```{r}
+mod1.6=svyglm(S115~V0026, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod1.6)
+```
+
+Significativo. Urbano cat ref.
+
+
+### VDF004	- Faixa de rendimento domiciliar per capita (exclusive o rendimento das pessoas cuja condição na  unidade domiciliar era pensionista, empregado doméstico ou parente do empregado doméstico)"
+
+```{r}
+mod1.7=svyglm(S115~renda, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod1.7)
+```
+
+Significativo. Até ½ salário mínimo de cat ref
+
+
+# Sistema de saúde
+
+## I00102 -	tem algum plano de saúde médico particular, de empresa ou órgão público?
+
+```{r}
+pns2019$variables$I00102 <- relevel(as.factor(pns2019$variables$I00102), ref = "Não")
+mod2.1=svyglm(S115~I00102, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod2.1)
+```
+
+Significativo, `Não` como cat ref
+
+## S111 - quem fez o parto
+
+```{r}
+mod2.2=svyglm(S115~S111, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod2.2)
+```
+
+Significativo. Médico cat ref por estar em maior quantidade + literatura
+
+## S112	- Onde foi realizado o parto?
+
+```{r}
+pns2019$variables$local=ifelse(pns2019$variables$S112 %in% c(
+  "UPA (Unidade de Pronto Atendimento), outro tipo de pronto atendimento público (24 horas), pronto-socorro ou emergência de hospital público.\n	",
+  "Hospital público ou maternidade pública", "Pronto-atendimento ou emergência de hospital privado\n"), "Ambiente hospitalar", 
+                               "Outros")
+mod2.3=svyglm(S115~local, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod2.3)
+```
+
+1. Não deu significativo
+2. Agrupamos 'clínicas...' e 'outros' em uma categoria só
+3. Deu significativo
+4. Ambiente hospitalar cat ref
+
+
+## S113 - Pagou algum valor pelo parto?
+
+```{r}
+pns2019$variables$S113 <- relevel(as.factor(pns2019$variables$S113), ref = "Não")
+mod2.4=svyglm(S115~S113, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod2.4)
+```
+
+Significativo. `Não` como cat ref.
+
+
+## S114	- O parto foi feito através do Sistema Único de Saúde (SUS)?
+
+```{r}
+mod2.5=svyglm(S115~S114, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod2.5)
+```
+
+Significativo
+
+## S128	- O parto foi realizado no estabelecimento de saúde indicado no pré-natal?
+
+```{r}
+mod2.6=svyglm(S115~S128, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod2.6)
+```
+
+Significativo
+
+# Estado de saúde
+
+### Q00201	- Algum médico já lhe deu o diagnóstico de hipertensão arterial (pressão alta)?
+
+```{r}
+pns2019$variables$Q00201 <- relevel(as.factor(pns2019$variables$Q00201), ref = "Não")
+mod3.1=svyglm(S115~Q00201, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod3.1)
+```
+
+Significativo. `Não` como cat ref
+
+### Q03001 - Algum médico já lhe deu o diagnóstico de diabetes?
+
+```{r}
+pns2019$variables$Q03001 <- relevel(as.factor(pns2019$variables$Q03001), ref = "Não")
+mod3.2=svyglm(S115~Q03001, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod3.2)
+```
+
+Não deu significativo mesmo trocando cat ref
+
+### R032 - Nos últimos 12 meses, a sra participou de grupo de planejamento familiar?
+
+
+
+```{r}
+pns2019$variables$R032 <- relevel(as.factor(pns2019$variables$R032), ref = "Não")
+mod3.3=svyglm(S115~R032, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod3.3)
+```
+
+Não deu significativo mesmo trocando cat ref
+
+### R037 - A sra e/ou seu companheiro já fizeram ou fazem algum tratamento para engravidar?
+
+```{r}
+pns2019$variables$R037 <- relevel(as.factor(pns2019$variables$R037), ref = "Nunca fizeram")
+mod3.4=svyglm(S115~R037, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod3.4)
+```
+
+1. Categoria de ref: 'Nunca fizeram'
+2. Significativo
+
+### Quantos partos a Sra já teve?
+
+```{r}
+pns2019$variables$quantos_partos <- relevel(as.factor(pns2019$variables$quantos_partos), ref = "3 ou mais")
+mod3.5=svyglm(S115~quantos_partos, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod3.5)
+```
+
+1. Categoria de referência 3 ou mais
+2. Deu significativo
+
+### S070 - Quantas consultas de pré-natal fez durante esta gravidez?
+
+```{r}
+pns2019$variables$quantos_prenatal <- relevel(as.factor(pns2019$variables$quantos_prenatal), ref = "Mais de 6")
+mod3.6=svyglm(S115~quantos_prenatal, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod3.6)
+```
+
+1. Mais de 6 categoria de referência 
+2. Deu significativo
+
+### S073 - "As consultas do pré-natal foram feitas através do Sistema Único de Saúde (SUS)?"
+
+```{r}
+mod3.7=svyglm(S115~S073, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod3.7)
+```
+
+Significativo. `Sim, todas` cat ref
+
+### S074 - Nesta gravidez, quem a atendeu na maioria das consultas?
+
+```{r}
+mod3.8=svyglm(S115~S074, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod3.8)
+```
+
+Significativo. `medico` cat ref
+
+
+### S080 - Durante o pré-natal de (nome) foi realizado teste∕ exame para sífilis? 
+
+```{r}
+mod3.9=svyglm(S115~S080, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod3.9)
+```
+
+Só Não Sabe/Não Lembra  não deu significativo
+
+### Quantas semanas de gravidez tinha no momento do parto?
+
+## contínuo
+
+```{r}
+mod3.10=svyglm(S115~S11801, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod3.10)
+```
+
+Não deu significativo
+
+## agregado
+
+```{r}
+pns2019$variables$semanas <- relevel(as.factor(pns2019$variables$semanas), ref = "Mais de 42 semanas")
+mod3.10.1=svyglm(S115~semanas, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod3.10.1)
+```
+
+1. Tomamos como categoria de referência "Mais de 42 semanas" e deu significativo
+2. Deu significativo
+
+### S125 - "Teve alguma complicação durante o parto?"
+
+```{r}
+pns2019$variables$S125 <- relevel(as.factor(pns2019$variables$S125), ref = "Não")
+mod3.11=svyglm(S115~S125, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+summary(mod3.11)
+```
+
+Mesmo trocando categoria de referência não deu significativo.
+
+## Classificando por Deviance
+
+```{r}
+labels_modelos <- c(
+"idade_continua(C008) 1.1", 
+"idade 1.1.1",
+"escolaridade 1.3", 
+"conjuge 1.4", 
+"regiao 1.5",
+"situ_censitaria(V0026) 1.6",
+"renda 1.7",
+"plano_saude(I00102) 2.1", 
+"quem_fez_o_parto(S111) 2.2", 
+"local 2.3", 
+"pagou(S113) 2.4", 
+"sus(S114) 2.5", 
+"estab_pre_natal(S128) 2.6", 
+"pressao_alta(Q00201)", 
+"tratamento(R037)", 
+"quantos_partos", 
+"quantos_prenatal", 
+"pre_natal_sus(S073)", 
+"atendimento(S074)", 
+"semanas"
+)
+modelos <- c(
+mod1.1$deviance, 
+mod1.1.1$deviance, 
+mod1.3$deviance, 
+mod1.4$deviance,
+mod1.5$deviance, 
+mod1.6$deviance, 
+mod1.7$deviance,
+mod2.1$deviance, 
+mod2.2$deviance,
+mod2.3$deviance,
+mod2.4$deviance,
+mod2.5$deviance,
+mod2.6$deviance,
+mod3.1$deviance,mod3.4$deviance,mod3.5$deviance,mod3.6$deviance,mod3.7$deviance,mod3.8$deviance,mod3.10.1$deviance
+)
+```
+
+
+```{r}
+df <- data.frame(cbind(variavel=labels_modelos, deviance=modelos))
+kbl(df, booktabs = T) %>%
+     kable_styling(latex_options = "striped")
+```
+
+
+
