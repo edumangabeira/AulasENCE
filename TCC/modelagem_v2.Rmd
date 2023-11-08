@@ -1,5 +1,5 @@
 ---
-title: "Modelagem"
+title: "Modelagem Versão 2"
 author: "Eduardo Freire, Marina Mangini"
 date: "2023-10-04"
 output: html_document
@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 ```
 
-```{r}
+
 library(PNSIBGE)
 tipo_de_parto_vars <- c("C008", "C009", "C011", "C01001", "C01002", "C10A", "C013","C014",
     "I00102", "I00404",
@@ -23,7 +23,7 @@ tipo_de_parto_vars <- c("C008", "C009", "C011", "C01001", "C01002", "C10A", "C01
 pns2019 <- get_pns(
    year=2019, 
    vars=tipo_de_parto_vars,
-   selected=FALSE, 
+   selected=TRUE, 
    anthropometry=FALSE, 
    labels=TRUE, 
    deflator=TRUE, 
@@ -31,7 +31,7 @@ pns2019 <- get_pns(
    savedir=tempdir()
 )
 save(pns2019, file="pns2019.Rdata")
-```
+
 
 
 ```{r}
@@ -102,6 +102,7 @@ pns2019$variables$atendimento=ifelse(pns2019$variables$S111 == "Médico (a)", "M
 pns2019$variables$semanas=ifelse(pns2019$variables$S11801 %in% c(0:38) , "até 38 semanas", 
                              ifelse(pns2019$variables$S11801 %in% c(39:42), "de 39 até 42 semanas",  "Mais de 42 semanas"))
 
+pns2019$variables$hipertensao=droplevels(pns2019$variables$Q00201)
 ```
 
 ```{r}
@@ -124,6 +125,8 @@ gera_tabela_mlg_complexo <- function(SVYGLM.RESULT, digits = 2) {
 
 - Escrever sobre as variáveis não significativas e porquê elas foram sendo retiradas do modelo.
 
+- Gerar tabelas com as quantidades na amostra(não estimada) para ver se alguma agregação tem `n` pequeno demais.
+
 - Escrever sobre os testes 1 a 1. Montar um quadro. Dividir entre significativas e não significativas. Um quadro para o ranqueamento e outro para mostras quais foram significativas ou não significativas.
 
 - Escrever sobre a adição das variáveis após a escolha dos modelos mais interessantes nos testes 1 a 1. Adicionar as variáveis de acordo com o quadro feito anteriormente, variáveis com melhor AIC. 
@@ -136,17 +139,22 @@ gera_tabela_mlg_complexo <- function(SVYGLM.RESULT, digits = 2) {
 
 - Literatura
 - Categorias extremas
-- Categoria com mais observações 
+- Categoria com mais observações
 
 # Variáveis sociodemográficas da mulher
 
 ### Idade
 
-
 ## Contínua
 
 ```{r}
-mod1.1=svyglm(S115~C008, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$idade)
+```
+
+
+
+```{r}
+mod1.1=svyglm(S115~C008, pns2019,family=quasibinomial)
 summary(mod1.1)
 ```
 
@@ -155,7 +163,7 @@ Significativo
 ## Categórica
 
 ```{r}
-mod1.1.1=svyglm(S115~idade, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+mod1.1.1=svyglm(S115~idade, pns2019,family=quasibinomial)
 summary(mod1.1.1)
 ```
 
@@ -164,8 +172,13 @@ Significativo - Usar literatura para justificar 18-24 anos como categoria de ref
 ### Cor ou raça
 
 ```{r}
-pns2019$variables$cor <- relevel(as.factor(pns2019$variables$cor), ref = "Preta")
-mod1.2=svyglm(S115~cor, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+pns2019$variables$cor=ifelse(pns2019$variables$C009 %in% c("Amarela", "Indígena", "Parda", "Preta"), "Não Branca", "Branca")
+table(pns2019$variables$S115, pns2019$variables$cor)
+```
+
+```{r}
+pns2019$variables$cor <- relevel(as.factor(pns2019$variables$cor), ref = "Branca")
+mod1.2=svyglm(S115~cor, pns2019,family=quasibinomial)
 summary(mod1.2)
 ```
 
@@ -178,7 +191,11 @@ pns2019$variables$escolaridade=ifelse(pns2019$variables$VDD004A %in% c("Sem inst
                             ifelse(pns2019$variables$VDD004A %in% c("Superior incompleto ou equivalente", "Médio completo ou equivalente"), "Médio completo ou equivalente",
                             ifelse(pns2019$variables$VDD004A == "Superior completo", "Superior completo ou mais", "Ignorado")))
 pns2019$variables$escolaridade <- relevel(as.factor(pns2019$variables$escolaridade), ref = "Sem instrução ou Fundamental completo ou equivalente")
-mod1.3=svyglm(S115~escolaridade, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$escolaridade)
+```
+
+```{r}
+mod1.3=svyglm(S115~escolaridade, pns2019,family=quasibinomial)
 summary(mod1.3)
 ```
 
@@ -190,7 +207,11 @@ summary(mod1.3)
 
 ```{r}
 pns2019$variables$conjuge <- relevel(as.factor(pns2019$variables$conjuge), ref = "Sim")
-mod1.4=svyglm(S115~conjuge, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$conjuge)
+```
+
+```{r}
+mod1.4=svyglm(S115~conjuge, pns2019,family=quasibinomial)
 summary(mod1.4)
 ```
 
@@ -202,7 +223,8 @@ Significativo. Categoria de referência 'sim' por estar em maior quantidade.
 pns2019$variables$regiaoAgg =ifelse(pns2019$variables$regiao %in% c("Norte", "Nordeste"),"Norte e Nordeste",
                     ifelse(pns2019$variables$regiao %in% c("Sul", "Sudeste"),"Sul e Sudeste","Centro-Oeste"))
 pns2019$variables$regiaoAgg <- relevel(as.factor(pns2019$variables$regiaoAgg), ref = "Norte e Nordeste")
-mod1.5=svyglm(S115~regiaoAgg, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$regiaoAgg)
+mod1.5=svyglm(S115~regiaoAgg, pns2019,family=quasibinomial)
 summary(mod1.5)
 ```
 
@@ -214,30 +236,43 @@ summary(mod1.5)
 ### V0026 - Tipo de situação censitária
 
 ```{r}
-mod1.6=svyglm(S115~V0026, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+pns2019$variables$V0026 <- relevel(as.factor(pns2019$variables$V0026), ref = "Urbano")
+table(pns2019$variables$S115, pns2019$variables$V0026)
+
+mod1.6=svyglm(S115~V0026, pns2019,family=quasibinomial)
 summary(mod1.6)
 ```
 
-Significativo. Urbano cat ref.
+Não deu significativo mesmo trocando cat refs
 
 
 ### VDF004	- Faixa de rendimento domiciliar per capita (exclusive o rendimento das pessoas cuja condição na  unidade domiciliar era pensionista, empregado doméstico ou parente do empregado doméstico)"
 
 ```{r}
-mod1.7=svyglm(S115~renda, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$renda)
+mod1.7=svyglm(S115~renda, pns2019,family=quasibinomial)
 summary(mod1.7)
 ```
 
-Significativo. Até ½ salário mínimo de cat ref
+Significativo. Até ½ salário mínimo de cat ref. O problema é que a quantidade de pessoas com renda acima de 5 salários mínimos é muito baixa para parto vaginal. Vamos reagrupar essa categoria com a anterior.
 
+```{r}
+pns2019$variables$renda=ifelse(pns2019$variables$VDF004 %in% c("Até ¼ salário mínimo", "Mais de ¼ até ½ salário mínimo"), "Até  ½ salário mínimo", 
+                             ifelse(pns2019$variables$VDF004 %in% c("Mais de ½ até 1 salário mínimo", "Mais de 1 até 2 salários mínimos"), "Mais de ½ até 2 salários mínimos",
+                            ifelse(pns2019$variables$VDF004 %in% c("Mais de 2 até 3 salários mínimos", "Mais de 3 até 5 salários mínimos", "Mais de 5 salários mínimos"), "Mais de 2 salários mínimos", "Ignorado")))
+table(pns2019$variables$S115, pns2019$variables$renda)
+mod1.7=svyglm(S115~renda, pns2019,family=quasibinomial)
+summary(mod1.7)
+```
 
 # Sistema de saúde
 
 ## I00102 -	tem algum plano de saúde médico particular, de empresa ou órgão público?
 
 ```{r}
+table(pns2019$variables$S115, pns2019$variables$I00102)
 pns2019$variables$I00102 <- relevel(as.factor(pns2019$variables$I00102), ref = "Não")
-mod2.1=svyglm(S115~I00102, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+mod2.1=svyglm(S115~I00102, pns2019,family=quasibinomial)
 summary(mod2.1)
 ```
 
@@ -246,11 +281,13 @@ Significativo, `Não` como cat ref
 ## S111 - quem fez o parto
 
 ```{r}
-mod2.2=svyglm(S115~S111, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+pns2019$variables$S111 =ifelse(pns2019$variables$S111 %in% c("Médico (a)"),"Médico (a)", "Outro (a)")
+table(pns2019$variables$S115, pns2019$variables$S111)
+mod2.2=svyglm(S115~S111, pns2019,family=quasibinomial)
 summary(mod2.2)
 ```
 
-Significativo. Médico cat ref por estar em maior quantidade + literatura
+Significativo. Médico cat ref por estar em maior quantidade + literatura. Contudo,  a quantidade de observações é muito baixa para a outra categoria, não vale a pena usar esse modelo mesmo que tenha dado significativo.
 
 ## S112	- Onde foi realizado o parto?
 
@@ -259,7 +296,8 @@ pns2019$variables$local=ifelse(pns2019$variables$S112 %in% c(
   "UPA (Unidade de Pronto Atendimento), outro tipo de pronto atendimento público (24 horas), pronto-socorro ou emergência de hospital público.\n	",
   "Hospital público ou maternidade pública", "Pronto-atendimento ou emergência de hospital privado\n"), "Ambiente hospitalar", 
                                "Outros")
-mod2.3=svyglm(S115~local, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$local)
+mod2.3=svyglm(S115~local, pns2019,family=quasibinomial)
 summary(mod2.3)
 ```
 
@@ -273,17 +311,19 @@ summary(mod2.3)
 
 ```{r}
 pns2019$variables$S113 <- relevel(as.factor(pns2019$variables$S113), ref = "Não")
-mod2.4=svyglm(S115~S113, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+mod2.4=svyglm(S115~S113, pns2019,family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$S113)
 summary(mod2.4)
 ```
 
-Significativo. `Não` como cat ref.
+Significativo. `Não` como cat ref. Talvez a quantidade de partos vaginais esteja pequena para a categoria `Sim`, mas vamos continuar usando esse modelo.
 
 
 ## S114	- O parto foi feito através do Sistema Único de Saúde (SUS)?
 
 ```{r}
-mod2.5=svyglm(S115~S114, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$S114)
+mod2.5=svyglm(S115~S114, pns2019,family=quasibinomial)
 summary(mod2.5)
 ```
 
@@ -292,7 +332,8 @@ Significativo
 ## S128	- O parto foi realizado no estabelecimento de saúde indicado no pré-natal?
 
 ```{r}
-mod2.6=svyglm(S115~S128, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$S128)
+mod2.6=svyglm(S115~S128, pns2019,family=quasibinomial)
 summary(mod2.6)
 ```
 
@@ -303,8 +344,9 @@ Significativo
 ### Q00201	- Algum médico já lhe deu o diagnóstico de hipertensão arterial (pressão alta)?
 
 ```{r}
-pns2019$variables$Q00201 <- relevel(as.factor(pns2019$variables$Q00201), ref = "Não")
-mod3.1=svyglm(S115~Q00201, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$Q00201)
+pns2019$variables$hipertensao <- relevel(as.factor(pns2019$variables$hipertensao), ref = "Não")
+mod3.1=svyglm(S115~hipertensao, pns2019,family=quasibinomial)
 summary(mod3.1)
 ```
 
@@ -314,7 +356,7 @@ Significativo. `Não` como cat ref
 
 ```{r}
 pns2019$variables$Q03001 <- relevel(as.factor(pns2019$variables$Q03001), ref = "Não")
-mod3.2=svyglm(S115~Q03001, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+mod3.2=svyglm(S115~Q03001, pns2019,family=quasibinomial)
 summary(mod3.2)
 ```
 
@@ -323,10 +365,9 @@ Não deu significativo mesmo trocando cat ref
 ### R032 - Nos últimos 12 meses, a sra participou de grupo de planejamento familiar?
 
 
-
 ```{r}
 pns2019$variables$R032 <- relevel(as.factor(pns2019$variables$R032), ref = "Não")
-mod3.3=svyglm(S115~R032, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+mod3.3=svyglm(S115~R032, pns2019,family=quasibinomial)
 summary(mod3.3)
 ```
 
@@ -335,19 +376,21 @@ Não deu significativo mesmo trocando cat ref
 ### R037 - A sra e/ou seu companheiro já fizeram ou fazem algum tratamento para engravidar?
 
 ```{r}
+pns2019$variables$R037=ifelse(pns2019$variables$R037 == "Nunca fizeram", "Nunca fizeram", "Fizeram")
 pns2019$variables$R037 <- relevel(as.factor(pns2019$variables$R037), ref = "Nunca fizeram")
-mod3.4=svyglm(S115~R037, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+mod3.4=svyglm(S115~R037, pns2019,family=quasibinomial)
 summary(mod3.4)
 ```
 
 1. Categoria de ref: 'Nunca fizeram'
-2. Significativo
+2. Continuou não dando significativo
 
 ### Quantos partos a Sra já teve?
 
 ```{r}
 pns2019$variables$quantos_partos <- relevel(as.factor(pns2019$variables$quantos_partos), ref = "3 ou mais")
-mod3.5=svyglm(S115~quantos_partos, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$quantos_partos)
+mod3.5=svyglm(S115~quantos_partos, pns2019,family=quasibinomial)
 summary(mod3.5)
 ```
 
@@ -358,7 +401,8 @@ summary(mod3.5)
 
 ```{r}
 pns2019$variables$quantos_prenatal <- relevel(as.factor(pns2019$variables$quantos_prenatal), ref = "Mais de 6")
-mod3.6=svyglm(S115~quantos_prenatal, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$quantos_prenatal)
+mod3.6=svyglm(S115~quantos_prenatal, pns2019,family=quasibinomial)
 summary(mod3.6)
 ```
 
@@ -368,7 +412,8 @@ summary(mod3.6)
 ### S073 - "As consultas do pré-natal foram feitas através do Sistema Único de Saúde (SUS)?"
 
 ```{r}
-mod3.7=svyglm(S115~S073, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+mod3.7=svyglm(S115~S073, pns2019,family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$S073)
 summary(mod3.7)
 ```
 
@@ -377,7 +422,9 @@ Significativo. `Sim, todas` cat ref
 ### S074 - Nesta gravidez, quem a atendeu na maioria das consultas?
 
 ```{r}
-mod3.8=svyglm(S115~S074, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+pns2019$variables$S074 = ifelse(pns2019$variables$S074 %in% c("Médico (a)"),"Médico (a)", "Outro (a)")
+table(pns2019$variables$S115, pns2019$variables$S074)
+mod3.8=svyglm(S115~S074, pns2019,family=quasibinomial)
 summary(mod3.8)
 ```
 
@@ -387,7 +434,8 @@ Significativo. `medico` cat ref
 ### S080 - Durante o pré-natal de (nome) foi realizado teste∕ exame para sífilis? 
 
 ```{r}
-mod3.9=svyglm(S115~S080, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+mod3.9=svyglm(S115~S080, pns2019,family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$S080)
 summary(mod3.9)
 ```
 
@@ -398,7 +446,7 @@ Só Não Sabe/Não Lembra  não deu significativo
 ## contínuo
 
 ```{r}
-mod3.10=svyglm(S115~S11801, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+mod3.10=svyglm(S115~S11801, pns2019,family=quasibinomial)
 summary(mod3.10)
 ```
 
@@ -407,79 +455,515 @@ Não deu significativo
 ## agregado
 
 ```{r}
+pns2019$variables$semanas=ifelse(pns2019$variables$S11801 %in% c(0:42) , "até 42 semanas", "Mais de 42 semanas")
 pns2019$variables$semanas <- relevel(as.factor(pns2019$variables$semanas), ref = "Mais de 42 semanas")
-mod3.10.1=svyglm(S115~semanas, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$semanas)
+mod3.10.1=svyglm(S115~semanas, pns2019,family=quasibinomial)
 summary(mod3.10.1)
 ```
 
-1. Tomamos como categoria de referência "Mais de 42 semanas" e deu significativo
-2. Deu significativo
+1. Reagrupamos para até 42 semanas, mais de 42 semanas
+2. Tomamos como categoria de referência "Mais de 42 semanas" e deu significativo
+3. Deu significativo
 
 ### S125 - "Teve alguma complicação durante o parto?"
 
 ```{r}
 pns2019$variables$S125 <- relevel(as.factor(pns2019$variables$S125), ref = "Não")
-mod3.11=svyglm(S115~S125, subset(pns2019, S068 %in% "Sim"),family=quasibinomial)
+table(pns2019$variables$S115, pns2019$variables$S125)
+mod3.11=svyglm(S115~S125, pns2019,family=quasibinomial)
 summary(mod3.11)
 ```
 
-Mesmo trocando categoria de referência não deu significativo.
+ cat ref Não
+2. Deu significativo.
 
-## Classificando por AIC
+# Classificando por AIC
+
+## Grupo 1
 
 ```{r}
 labels_modelos <- c(
 "idade_continua(C008) 1.1", 
 "idade 1.1.1",
+"cor 1.2",
 "escolaridade 1.3", 
 "conjuge 1.4", 
 "regiao 1.5",
-"situ_censitaria(V0026) 1.6",
-"renda 1.7",
-"plano_saude(I00102) 2.1", 
-"quem_fez_o_parto(S111) 2.2", 
+"renda 1.7"
+)
+modelos <- AIC(
+mod1.1,
+mod1.1.1,
+mod1.2,
+mod1.3, 
+mod1.4,
+mod1.5,
+mod1.7
+)
+```
+
+```{r}
+df <- data.frame(cbind(labels_modelos, modelos)) %>% 
+  select(labels_modelos, AIC)
+kbl(df[order(df$AIC),], booktabs = T) %>%
+     kable_styling(latex_options = "striped")
+```
+
+## Seleção de modelo a partir do grupo 1
+
+escolaridade tem o menor AIC, então iremos começar com o modelo com essa variável
+
+### renda 1.7
+
+```{r}
+mod4.1 <- svyglm(S115~escolaridade + renda, pns2019, family=quasibinomial)
+summary(mod4.1)
+```
+
+1. Adicionar renda parece ter sido significativo
+
+```{r}
+anova(mod1.3, mod4.1 ,test = "Chisq")
+anova(mod1.7, mod4.1 ,test = "Chisq")
+```
+
+A adição da variável renda foi significativa.
+
+### idade 1.1
+
+```{r}
+mod4.2 <- svyglm(S115~C008 + escolaridade + renda, pns2019, family=quasibinomial)
+summary(mod4.2)
+```
+
+1. Adicionar idade deu significativo. 
+
+```{r}
+anova(mod1.1, mod4.2 ,test = "Chisq")
+anova(mod4.1, mod4.2 ,test = "Chisq")
+```
+
+A adição da variável foi significativa em relação aos modelos com uma variável
+
+### regiao 1.5
+
+```{r}
+mod4.3 <- svyglm(S115~C008 + escolaridade + renda + regiaoAgg, pns2019, family=quasibinomial)
+summary(mod4.3)
+```
+
+Adicionar a variável região não deu significativo.
+
+### cor 1.2
+
+```{r}
+mod4.4 <- svyglm(S115~C008 + escolaridade + renda +  cor, pns2019, family=quasibinomial)
+summary(mod4.4)
+```
+
+Adicionar cor não deu significativo
+
+### conjuge 1.4
+
+```{r}
+mod4.5 <- svyglm(S115~C008 + escolaridade + renda + conjuge, pns2019, family=quasibinomial)
+summary(mod4.5)
+```
+Adicionar a variável conjuge não deu significativo.
+
+## Grupo 2
+
+```{r}
+labels_modelos <- c("plano_saude(I00102) 2.1",
 "local 2.3", 
 "pagou(S113) 2.4", 
 "sus(S114) 2.5", 
-"estab_pre_natal(S128) 2.6", 
-"pressao_alta(Q00201)", 
-"tratamento(R037)", 
+"estab_pre_natal(S128) 2.6")
+modelos <- AIC(mod2.1, 
+mod2.3,
+mod2.4,
+mod2.5,
+mod2.6)
+df <- data.frame(cbind(labels_modelos, modelos))
+kbl(df[order(df$AIC),], booktabs = T) %>%
+     kable_styling(latex_options = "striped")
+```
+
+### quem fez o parto(S111) 2.2
+
+```{r}
+mod4.6 <- svyglm(S115~C008 + escolaridade + renda + S111, pns2019, family=quasibinomial)
+summary(mod4.6)
+```
+
+Neste caso a escolaridade deixou de ser significativa ao nível de 5% de significância para quase todas as cateogrias, o mesmo para salário.
+
+```{r}
+anova(mod4.2, mod4.6)
+anova(mod4.6, mod2.2)
+```
+
+A inclusão da variável no modelo foi significativa. Contudo, a S111 tem poucas observações para uma das categorias, vamos ignorar esse modelo.
+
+
+### SUS(S114) 2.5
+
+```{r}
+mod4.7 <- svyglm(S115~C008 + renda + escolaridade + S114, pns2019, family=quasibinomial)
+summary(mod4.7)
+```
+
+A variável SUS deu significativa no novo modelo. As variáveis renda e escolaridade perdem a significância para uma categoria cada, mas ainda ficam no modelo.
+
+```{r}
+anova(mod4.2, mod4.7)
+anova(mod4.7, mod2.5)
+```
+
+A inclusão da variável SUS também deu significativa. Novo modelo:
+
+### plano de saúde I00102 2.1
+
+```{r}
+mod4.9 <- svyglm(S115~C008 +  escolaridade + renda + S114 + I00102 , pns2019, family=quasibinomial)
+summary(mod4.9)
+```
+
+A variável plano de saúde deu significativa e renda perdeu significância 
+
+Novo modelo 
+
+```{r}
+mod4.9 <- svyglm(S115~C008 + escolaridade + S114 + I00102, pns2019, family=quasibinomial)
+summary(mod4.9)
+```
+
+## pagou pelo parto 2.4
+
+```{r}
+mod4.10 <- svyglm(S115~C008 + escolaridade + S114 + I00102 + S113, pns2019, family=quasibinomial)
+summary(mod4.10)
+```
+
+```{r}
+anova(mod4.10, mod4.9)
+anova(mod4.10, mod2.4)
+```
+
+A inclusão de se pagou pelo parto é significativa
+
+### local 2.3
+
+
+```{r}
+mod4.11 <- svyglm(S115~C008 + escolaridade + S114 + I00102 + S113 + local, pns2019, family=quasibinomial)
+summary(mod4.11)
+```
+A inclusão de local não é significativa
+
+### estabelecimento pré natal indicado 2.6
+
+```{r}
+mod4.12 <- svyglm(S115~C008 + escolaridade + S114 + I00102 + S113 + S128, pns2019, family=quasibinomial)
+summary(mod4.12)
+```
+
+A variável deu significativa.
+
+## Grupo 3
+
+```{r}
+labels_modelos <- c("hipertensao (Q00201)",
 "quantos_partos", 
 "quantos_prenatal", 
 "pre_natal_sus(S073)", 
 "atendimento(S074)", 
-"semanas"
+"semanas",
+"complicação")
+modelos <- AIC(mod3.1,mod3.5,mod3.6,mod3.7,mod3.8,mod3.10.1,mod3.11
 )
-modelos <- AIC(
-mod1.1, 
-mod1.1.1, 
-mod1.3, 
-mod1.4,
-mod1.5, 
-mod1.6, 
-mod1.7,
-mod2.1, 
-mod2.2,
-mod2.3,
-mod2.4,
-mod2.5,
-mod2.6,
-mod3.1,
-mod3.4,
-mod3.5,
-mod3.6,
-mod3.7,
-mod3.8,
-mod3.10.1
-)
-```
-
-
-```{r}
 df <- data.frame(cbind(labels_modelos, modelos))
-kbl(df, booktabs = T) %>%
+kbl(df[order(df$AIC),], booktabs = T) %>%
      kable_styling(latex_options = "striped")
 ```
 
+### pre_natal_sus(S073) 3.7
+
+```{r}
+mod4.13 <- svyglm(S115~C008 + escolaridade + S114 + I00102 + S113 + S128 + S073, pns2019, family=quasibinomial)
+summary(mod4.13)
+```
+
+Deu significativa para uma categoria. Aqui vai dar problema em comparar os modelos 4.13 e o 4.12 por conta do filtro de pré natal. Vamos deixar essa para o final.
+
+### quantos_prenatal 3.6
+
+```{r}
+mod4.14 <- svyglm(S115~C008 + escolaridade + S114 + I00102 + S113 + S128 + quantos_prenatal, pns2019, family=quasibinomial)
+summary(mod4.14)
+```
+
+Vamos deixar essa pro final.
+
+
+### atendimento(S074) 3.8
+
+```{r}
+mod4.15 <- svyglm(S115~C008 + S111+ S114 + S073 + S074, pns2019, family=quasibinomial)
+summary(mod4.15)
+```
+
+Vamos deixar essa para o final.
+
+
+
+### semanas 3.10.1
+
+```{r}
+mod4.16 <- svyglm(S115~C008 + escolaridade + S114 + I00102 + S113 + S128+ semanas, pns2019, family=quasibinomial)
+summary(mod4.16)
+```
+
+Deu significativa, mas a variável de plano de saúde sai do modelo
+
+```{r}
+anova(mod4.16, mod3.10.1)
+anova(mod4.16, mod4.12)
+```
+
+Inclusão deu significativa
+
+### hipertensao(Q00201) 3.1
+
+```{r}
+mod4.17 <- svyglm(S115~C008 + escolaridade + S114 + S113 + S128 + semanas + hipertensao, pns2019, family=quasibinomial)
+summary(mod4.17)
+```
+
+Deu significativa
+
+```{r}
+#anova(mod4.17, mod3.1)
+#anova(mod4.16, mod4.17)
+```
+
+Inclusao tbm deu significativa
+
+### quantos_partos 3.5
+
+```{r}
+mod4.18 <- svyglm(S115~C008 + escolaridade + S114 + S113 + S128+ semanas + hipertensao + quantos_partos, pns2019, family=quasibinomial)
+summary(mod4.18)
+```
+
+Não deu significativa para todas as categorias e escolaridade perdeu significancia. Melhor manter escolaridade ou deixar quantos partos?
+
+### complicação 3.11
+
+```{r}
+mod4.19 <- svyglm(S115~C008 +  S114 + S113 + S128+ semanas + Q00201 + quantos_partos + S125, pns2019, family=quasibinomial)
+summary(mod4.19)
+```
+
+Deu significativa
+
+# Modelo preliminar sem interações - quantos_partos em vez de escolaridade
+
+```{r}
+mod4.20 <- svyglm(S115~ C008 + S114 + S113 + S128 + semanas + Q00201 + quantos_partos + S125, pns2019, family=quasibinomial)
+summary(mod4.20)
+```
+
+# Modelo preliminar sem interações - escolaridade em vez de quantos_partos  
+
+```{r}
+mod4.21 <- svyglm(S115~ C008 + S114 + S113 + S128 + semanas + Q00201 + escolaridade + S125, pns2019, family=quasibinomial)
+summary(mod4.21)
+```
+
+## Adicionando variáveis do pré-natal
+
+4.20 - quantos_partos
+4.21 - escolaridade
+
+### Adicionando quantos_prenatal aos dois modelos preliminares
+
+```{r}
+mod4.22 <- svyglm(S115 ~ C008 + S114 + S113 + S128 + semanas + Q00201 + escolaridade + S125 + quantos_prenatal, pns2019, family=quasibinomial)
+summary(mod4.22)
+```
+
+No caso do modelo que inclui escolaridade, a variável adicionada que indica o número de consultas no pré-natal faz com que a variável escolaridade perca significância.
+
+```{r}
+mod4.23 <- svyglm(S115 ~ C008 + S114 + S113 + S128 + semanas + Q00201 + quantos_partos + S125 + quantos_prenatal, pns2019, family=quasibinomial)
+summary(mod4.23)
+```
+
+No caso do modelo que inclui quantidade de partos, a variável adicionada que indica o número de consultas no pré-natal não faz nenhuma variável perder significância.
+
+### Adicionando pre_natal_sus (S073) aos dois modelos preliminares
+
+```{r}
+mod4.24 <- svyglm(S115 ~ C008 + S114 + S113 + S128 + semanas + Q00201 + escolaridade + S125 + S073, pns2019, family=quasibinomial)
+summary(mod4.24)
+```
+
+No caso do modelo que inclui escolaridade, a variável adicionada que indica se as consultas do pré-natal foram pelo SUS faz com que a variável escolaridade perca significância.
+
+```{r}
+mod4.25 <- svyglm(S115 ~ C008 + S114 + S113 + S128 + semanas + Q00201 + quantos_partos + S125 + S073, pns2019, family=quasibinomial)
+summary(mod4.25)
+```
+
+No caso do modelo que inclui quantidade de partos, a variável adicionada que indica se as consultas do pré-natal foram pelo SUS  não faz nenhuma variável perder significância.
+
+### Adicionando atendimento (S074) aos dois modelos preliminares
+
+```{r}
+mod4.26.1 <- svyglm(S115 ~ C008 + S114 + S113 + S128 + semanas + Q00201 + escolaridade + S125 + S074, pns2019, family=quasibinomial)
+#summary(mod4.26.1)
+```
+
+```{r}
+mod4.26 <- svyglm(S115 ~ C008 + S114 + S113 + S128 + semanas + Q00201 + escolaridade + S125 + S074 + regiaoAgg, pns2019, family=quasibinomial)
+summary(mod4.26)
+```
+
+```{r}
+anova(mod4.26, mod4.26.1)
+```
+
+
+No caso do modelo que inclui escolaridade, a variável adicionada que indica a pessoa profissional que atendeu no pré-natal não faz nenhuma variável perder significância.
+
+```{r}
+mod4.27 <- svyglm(S115 ~ C008 + S114 + S113 + S128 + semanas + Q00201 + quantos_partos + S125 + S074, pns2019, family=quasibinomial)
+summary(mod4.27)
+```
+
+No caso do modelo que inclui quantidade de partos, a variável adicionada que indica a pessoa profissional que atendeu no pré-natal não faz nenhuma variável perder significância.
+
+## Impressões
+
+- O modelo 4.21 que inclui escolaridade é sensível à adição de variáveis do pré-natal, com exceção do modelo que inclui a variável `S074`.
+
+- O modelo 4.20 que inclui a quantidade de partos não é sensível à adição de nenhuma variável do pré-natal, mas as variáveis `quantos_prenatal` e `S073` não tem todas as categorias significativas.
+
+
+### Ajuste de um modelo com a variável quantos_partos e todas do pré-natal
+
+```{r}
+mod4.28 <- svyglm(S115 ~ C008 + S114 + S113 + S128 + semanas + Q00201 + quantos_partos + S125 + S074 + S073 + quantos_prenatal, pns2019, family=quasibinomial)
+summary(mod4.28)
+```
+
+Com adição de todas as variáveis do pré-natal, o modelo tem as seguintes variáveis não significativas: `semanas`, `S074` e `S128`.
+
+### Ajuste de um modelo com a variável escolaridade e todas do pré-natal
+
+```{r}
+mod4.29 <- svyglm(S115 ~ C008 + S114 + S113 + S128 + semanas + Q00201 + escolaridade + S125 + S074 + S073 + quantos_prenatal, pns2019, family=quasibinomial)
+summary(mod4.29)
+```
+
+Com adição de todas as variáveis do pré-natal, o modelo tem as seguintes variáveis não significativas: `escolaridade`, `S074` e `S128`.
+
+### Olhando novamente as tabelas
+
+```{r}
+table(pns2019$variables$S115, pns2019$variables$quantos_prenatal)
+table(pns2019$variables$S115, pns2019$variables$S073)
+table(pns2019$variables$S115, pns2019$variables$S074)
+```
+
+Tanto na S073 e na quantos_prenatal existem categorias com poucas observações, e isso pode estar fazendo com que o modelo mude tanto com a adição delas. Como a S074 parece mais balanceada, possui mais observações e não alterou completamente os modelos, vamos adicioná-la para os dois modelos preliminares e testar interações.
+
+## Modelos com interação
+
+## Usando o modelo com `quantos_partos`
+
+### quantos_partos * idade (ref:Guimarães (201?))
+
+```{r}
+mod5.1 <- svyglm(S115 ~ C008 + S114 + S113 + S128 + semanas + hipertensao + quantos_partos + S125 + S074 + quantos_partos*C008, pns2019, family=quasibinomial)
+summary(mod5.1)
+```
+
+A idade (C008) deixou de ser significativa nesse modelo.
+
+
+## Usando o modelo com `escolaridade`
+
+### escolaridade * hipertensão (ref:? (????) - algo a ver com acesso à alimentação saudável e educação alimentar?)
+
+```{r}
+mod5.2 <- svyglm(S115 ~ C008 + S114 + S113 + S128 + semanas + hipertensao + escolaridade + S125 + S074 + escolaridade*hipertensao, pns2019, family=quasibinomial)
+summary(mod5.2)
+```
+
+A escolaridade deixou de ser significativa nesse modelo, mas as interações são significativas.
+
+### escolaridade * hipertensão (ref:? (????) - algo a ver com acesso à alimentação saudável e educação alimentar?) + cor * escolaridade
+
+```{r}
+pns2019$variables$cor2 <-ifelse(pns2019$variables$C009 == "Branca", "Brancas", "Outras")
+pns2019$variables$cor2 <- relevel(as.factor(pns2019$variables$cor2), ref = "Brancas")
+mod5.3 <- svyglm(S115 ~ C008 + cor2 + S114 + S113 + S128 + semanas + hipertensao + escolaridade + S125 + S074 + cor2 * escolaridade, pns2019, family=quasibinomial)
+summary(mod5.3)
+```
+
+```{r}
+mod5.3.1 <- svyglm(S115 ~ C008 + S114 + S113 + S128 + semanas + escolaridade + S125 + S074 + cor2 * escolaridade + escolaridade * hipertensao, pns2019, family=quasibinomial)
+summary(mod5.3.1)
+```
+
+- Como calcular OR para as interações.
+- Testar interações para outras variáveis (Plano de saúde, ...).
+- Testar tirar o SUS e colocar as outra variáveis (Plano de saúde, ...).
+- Ver se melhora o AIC (modelo com SUS vs modelo com Plano de saúde).
+- Olhar só as que possam substituir o SUS.
+- Testar Região.
+
+```{r}
+mod6.1 <- svyglm(S115 ~ C008 + cor2 + S114 + S113 + S128 + semanas + hipertensao + escolaridade + S125 + S074 + cor2 * escolaridade, pns2019, family=quasibinomial)
+summary(mod6.1)
+mod6.2 <- svyglm(S115 ~ C008 + cor2 + I00102 + S113 + S128 + semanas + hipertensao + escolaridade + S125 + S074 + cor2 * escolaridade, pns2019, family=quasibinomial)
+summary(mod6.2)
+AIC(mod6.1, mod6.2)
+```
+
+```{r}
+mod6.3 <- svyglm(S115 ~ C008 + cor2 + I00102 + S128 + semanas + hipertensao + escolaridade + S125 + S074 + cor2 * escolaridade + regiaoAgg, pns2019, family=quasibinomial)
+summary(mod6.3)
+```
+
+## Modelo final - Modelo 5.3
+
+- Calcular razão de chances para o modelo (inclusive interações).
+- Olhar tcc das meninas.
+- Fazer o mesmo para o modelo 5.3.1 para testar.
+
+```{r}
+gera_tabela_mlg_complexo(mod5.3)
+```
+
+## Catplot dos modelos
+
+```{r}
+library("interactions")
+cat_plot(mod5.1, pred = C008, modx = quantos_partos , interval = TRUE)
+```
+
+```{r}
+library("interactions")
+cat_plot(mod5.3, pred = hipertensao, modx = escolaridade , interval = TRUE)
+```
+
+```{r}
+library("interactions")
+cat_plot(mod5.3, pred = cor2, modx = escolaridade , interval = TRUE)
+````
 
 
